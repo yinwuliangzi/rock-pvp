@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>洛克王国 · 对战计算器</title>
+<link rel="stylesheet" href="calc.css">
+</head>
+<body>
+<div class="app" id="app">
+  <header class="topbar">
+    <div class="title">对战计算器</div>
+    <div class="coef"><span>系数</span><input id="coef" type="number" step="0.001" value="1"></div>
+  </header>
+
+  <!-- 我方 -->
+  <section class="view on" id="view-mine">
+    <div class="legend-bar" id="roleLegend"></div>
+    <div class="slots" id="mineSlots"></div>
+    <div class="card" id="mineCard">
+      <div class="card-head">
+        <div class="card-name" id="mineName"><span id="mineNameText">选择精灵</span><button type="button" class="change-btn" data-side="mine">更换</button></div>
+        <div class="tags" id="mineTags"></div>
+      </div>
+      <div class="line"><span class="lbl">属性</span><span id="mineEle">—</span></div>
+      <div class="line"><span class="lbl">血脉</span><span id="mineBlood">—</span></div>
+      <div class="moves" id="mineMoves"></div>
+      <div class="line"><span class="lbl">性格</span><select id="mineNature"></select></div>
+      <div class="row2">
+        <label class="field"><span>等级</span><input id="mineLevel" type="number" value="60"></label>
+        <label class="field"><span>星级</span><input id="mineStar" type="number" value="5" min="0" max="5"></label>
+      </div>
+      <table class="ivtable">
+        <thead><tr><th>能力</th><th>种族值</th><th colspan="3">个体</th><th>合计</th></tr></thead>
+        <tbody id="mineStats"></tbody>
+        <tfoot><tr><td colspan="6" class="ivtotal" id="mineIvTotal">个体合计 60/60</td></tr></tfoot>
+      </table>
+      <div class="row2" style="margin-top:8px">
+        <label class="field"><span>当前 HP</span><input id="mineHp" type="number" value="400"></label>
+        <label class="field"><span>先手值</span><input id="minePriority" type="number" step="1" value="0"></label>
+        <label class="field"><span>魔力值</span><input id="mineMana" type="number" min="0" max="4" value="4"></label>
+        <label class="field"><span>状态</span><select id="mineStatus">
+          <option value="健康">健康</option><option value="中毒">中毒</option><option value="灼烧">灼烧</option>
+          <option value="寄生">寄生</option><option value="冻结">冻结</option><option value="引电">引电</option>
+        </select></label>
+      </div>
+      <div class="hpbar"><i id="mineHpBar"></i></div>
+      <div class="hpnote" id="mineHpNote">—</div>
+      <div class="energy"><span>星星能量</span><input id="mineEnergy" type="number" min="0" max="10" value="5"><span class="pips" id="mineEnergyPips"></span></div>
+    </div>
+  </section>
+
+  <!-- 对战 -->
+  <section class="view" id="view-battle">
+    <div class="battle2">
+      <div class="rail" id="railMine"></div>
+
+      <div class="bcol">
+        <div class="fighter mine" id="fighterMine">
+          <span id="duelMineName">我方</span><i class="spark">✦</i>
+        </div>
+        <div class="mcards" id="battleMoves"></div>
+      </div>
+
+      <div class="bcol">
+        <div class="fighter foe" id="fighterFoe">
+          <span id="duelFoeName">对手</span><i class="spark">✦</i>
+        </div>
+        <div class="mcards" id="foeHits"></div>
+      </div>
+
+      <div class="rail" id="railFoe"></div>
+    </div>
+
+    <div class="card">
+      <div class="battle-head">轮次时间轴 <span class="phase-tag" id="phaseName">—</span></div>
+      <div class="timeline"><i id="tlFill"></i><span class="tl-max">50 回合</span></div>
+      <div class="tl-legend" id="tlLegend"></div>
+      <div class="row2" style="margin-bottom:8px">
+        <label class="field"><span>我方动作</span><select id="meAction">
+          <option value="attack">出招</option><option value="charge">聚能</option><option value="switch">换人</option><option value="counter">应对</option>
+        </select></label>
+        <label class="field"><span>对手动作</span><select id="foeActionRec">
+          <option value="attack">出招</option><option value="charge">聚能</option><option value="switch">换人</option><option value="counter">应对</option>
+        </select></label>
+      </div>
+      <div class="row2" style="margin-bottom:8px">
+        <label class="field"><span>我方这招</span><select id="meMoveSel"></select></label>
+        <label class="field"><span>对手这招</span><select id="foeMoveSel"></select></label>
+      </div>
+      <div class="row2" style="margin-bottom:8px">
+        <label class="field"><span>贴策略</span><select id="stratSel"></select></label>
+      </div>
+      <p class="hint" id="stratHint" style="margin:-2px 0 8px"></p>
+      <div class="row2" style="margin-bottom:8px">
+        <label class="field"><span>本回合倒下</span><select id="koSide">
+          <option value="">没有</option><option value="foe">对手倒了一只</option><option value="mine">我方倒了一只</option>
+        </select></label>
+        <label class="field"><span>对手被迫聚能</span><select id="foeForced">
+          <option value="">否</option><option value="1">是</option>
+        </select></label>
+      </div>
+      <div class="turn-actions">
+        <button type="button" class="tbtn" id="recordTurn">记录本回合</button>
+        <button type="button" class="tbtn ghost" id="undoTurn">撤回上一回合</button>
+        <button type="button" class="tbtn ghost" id="clearTurns">清空</button>
+        <select id="restoreTurn" style="flex:1;min-width:120px"><option value="">还原到第几回合…</option></select>
+      </div>
+      <div class="turn-actions" style="margin-top:6px">
+        <button type="button" class="tbtn ghost" id="exportBtn">导出记录</button>
+        <label class="tbtn ghost" for="importFile" style="cursor:pointer">导入记录</label>
+        <input type="file" id="importFile" accept="application/json,.json" hidden>
+      </div>
+      <div class="history" id="historyList"></div>
+    </div>
+
+    <div class="card">
+      <div class="battle-head">环境与场地</div>
+      <div class="row2">
+        <label class="field"><span>天气</span><select id="weather">
+          <option value="">无</option><option value="rain">下雨（水系 +75%）</option>
+          <option value="sand">沙暴（地系能耗减半）</option><option value="snow">暴风雪</option><option value="thunder">雷鸣</option>
+        </select></label>
+        <label class="field"><span>对手减伤</span><input id="cut" type="number" value="0" min="0" max="90"></label>
+      </div>
+      <div class="row2">
+        <label class="field"><span>对手这轮用状态技</span><select id="foeStatusSkill">
+          <option value="">否</option><option value="1">是（愿力冲击 ×2.5）</option>
+        </select></label>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="battle-head">双方场地与状态</div>
+      <div class="p1p2">
+        <div class="pcard-mini p1">
+          <div class="pname"><b class="p1t">P1</b> 我方</div>
+          <div class="stategrid">
+            <label><span>攻击印记</span><input data-state="mine" data-key="mark" type="number" min="0" value="0"></label>
+            <label><span>风起</span><input data-state="mine" data-key="wind" type="number" min="0" value="0"></label>
+            <label><span>蓄势</span><input data-state="mine" data-key="charge" type="number" min="0" max="1" value="0"></label>
+            <label><span>光合</span><input data-state="mine" data-key="photo" type="number" min="0" value="0"></label>
+            <label><span>棘刺</span><input data-state="mine" data-key="spike" type="number" min="0" value="0"></label>
+            <label><span>减速</span><input data-state="mine" data-key="slow" type="number" min="0" max="1" value="0"></label>
+            <label><span>连击</span><input data-state="mine" data-key="combo" type="number" min="1" value="1"></label>
+            <label><span>中毒</span><input data-state="mine" data-key="poison" type="number" min="0" value="0"></label>
+            <label><span>灼烧</span><input data-state="mine" data-key="burn" type="number" min="0" value="0"></label>
+          </div>
+          <div class="pstat" id="p1Stat">—</div>
+        </div>
+        <div class="pcard-mini p2">
+          <div class="pname"><b class="p2t">P2</b> 敌方</div>
+          <div class="stategrid">
+            <label><span>攻击印记</span><input data-state="foe" data-key="mark" type="number" min="0" value="0"></label>
+            <label><span>风起</span><input data-state="foe" data-key="wind" type="number" min="0" value="0"></label>
+            <label><span>蓄势</span><input data-state="foe" data-key="charge" type="number" min="0" max="1" value="0"></label>
+            <label><span>光合</span><input data-state="foe" data-key="photo" type="number" min="0" value="0"></label>
+            <label><span>棘刺</span><input data-state="foe" data-key="spike" type="number" min="0" value="0"></label>
+            <label><span>减速</span><input data-state="foe" data-key="slow" type="number" min="0" max="1" value="0"></label>
+            <label><span>连击</span><input data-state="foe" data-key="combo" type="number" min="1" value="1"></label>
+            <label><span>中毒</span><input data-state="foe" data-key="poison" type="number" min="0" value="0"></label>
+            <label><span>灼烧</span><input data-state="foe" data-key="burn" type="number" min="0" value="0"></label>
+          </div>
+          <div class="pstat" id="p2Stat">—</div>
+          <div class="ticknote" id="tickNote"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 敌方 -->
+  <section class="view" id="view-foe">
+    <div class="legend-bar" id="roleLegendFoe"></div>
+    <div class="slots" id="foeSlots"></div>
+    <div class="card" id="foeCard">
+      <div class="card-head">
+        <div class="card-name" id="foeName"><span id="foeNameText">选择精灵</span><button type="button" class="change-btn" data-side="foe">更换</button></div>
+        <div class="tags" id="foeTags"></div>
+      </div>
+      <div class="line"><span class="lbl">属性</span><span id="foeEle">—</span></div>
+      <div class="line"><span class="lbl">血脉</span><span id="foeBlood">—</span></div>
+      <div class="moves" id="foeMoves"></div>
+      <div class="line"><span class="lbl">性格</span><select id="foeNature"></select></div>
+      <div class="row2">
+        <label class="field"><span>等级</span><input id="foeLevel" type="number" value="60"></label>
+        <label class="field"><span>星级</span><input id="foeStar" type="number" value="5" min="0" max="5"></label>
+      </div>
+      <table class="ivtable">
+        <thead><tr><th>能力</th><th>种族值</th><th colspan="3">个体</th><th>合计</th></tr></thead>
+        <tbody id="foeStats"></tbody>
+        <tfoot><tr><td colspan="6" class="ivtotal" id="foeIvTotal">个体合计 60/60</td></tr></tfoot>
+      </table>
+      <div class="row2" style="margin-top:8px">
+        <label class="field"><span>当前 HP</span><input id="foeHp" type="number" value="300"></label>
+        <label class="field"><span>先手值</span><input id="foePriority" type="number" step="1" value="0"></label>
+        <label class="field"><span>魔力值</span><input id="foeMana" type="number" min="0" max="4" value="4"></label>
+        <label class="field"><span>状态</span><select id="foeStatus">
+          <option value="健康">健康</option><option value="中毒">中毒</option><option value="灼烧">灼烧</option>
+          <option value="寄生">寄生</option><option value="冻结">冻结</option><option value="引电">引电</option>
+        </select></label>
+      </div>
+      <div class="hpbar"><i id="foeHpBar"></i></div>
+      <div class="hpnote" id="foeHpNote">—</div>
+      <div class="energy"><span>星星能量</span><input id="foeEnergy" type="number" min="0" max="10" value="5"><span class="pips" id="foeEnergyPips"></span></div>
+    </div>
+  </section>
+
+  <div class="picker" id="picker" hidden>
+    <div class="picker-box">
+      <div class="picker-head">选择精灵<button type="button" class="picker-close" id="pickerClose">×</button></div>
+      <input id="pickerSearch" type="search" placeholder="输入名字筛选，如 火神">
+      <div class="picker-list" id="pickerList"></div>
+    </div>
+  </div>
+
+  <nav class="tabbar">
+    <button class="tab on" data-view="mine">我方精灵</button>
+    <button class="tab" data-view="battle">对战</button>
+    <button class="tab" data-view="foe">敌方精灵</button>
+  </nav>
+</div>
+
+<script src="natures-data.js"></script>
+<script src="pets-data.js"></script>
+<script src="skills-data.js"></script>
+<script src="types-data.js"></script>
+<script src="calc.js"></script>
+</body>
+</html>

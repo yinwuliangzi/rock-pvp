@@ -1,0 +1,1592 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>洛克王国 PVP 局面速算</title>
+<style>
+  :root { --ink:#1d1d1f; --muted:#6b6b70; --line:#e6e6ea; --bg:#f2f3f5; --accent:#1f6f4a; --warn:#a2541a;
+          --card:#ffffff; --head:#e8564a; --head2:#f6f1e7; --shadow:0 1px 2px rgba(20,20,30,.06), 0 8px 24px rgba(20,20,30,.05); }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:0 16px 64px; font:16px/1.6 "Segoe UI","Microsoft YaHei",sans-serif; color:var(--ink); background:var(--bg); }
+  .workbench { display:grid; grid-template-columns: minmax(320px, 430px) 1fr; gap:18px; align-items:start; }
+  .col-result { position:sticky; top:74px; }
+  @media (max-width: 900px) {
+    .workbench { grid-template-columns: 1fr; }
+    .col-result { position:static; }
+  }
+  .appbar { position:sticky; top:0; z-index:20; margin:0 -16px 18px; padding:10px 16px; background:rgba(242,243,245,.94);
+    backdrop-filter:blur(8px); border-bottom:1px solid var(--line); display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .appbar-title { font-weight:700; font-size:15px; letter-spacing:.02em; }
+  .segmented { display:flex; gap:4px; padding:3px; background:#e6e7ea; border-radius:999px; margin-left:auto; }
+  .seg { border:0; background:transparent; color:var(--muted); font:inherit; font-size:13px; padding:5px 14px; border-radius:999px; cursor:pointer; }
+  .seg.on { background:#fff; color:var(--ink); box-shadow:0 1px 3px rgba(0,0,0,.12); }
+  main { max-width: 880px; margin: 0 auto; }
+  h1 { font-size: 24px; margin: 0 0 6px; }
+  .sub { color: var(--muted); margin: 0 0 22px; }
+  form { display:grid; grid-template-columns: 1fr 1fr; gap:18px; }
+  @media (max-width: 680px) { form { grid-template-columns: 1fr; } }
+  fieldset { border:0; border-radius:16px; padding:0 16px 16px; background:var(--card); margin:0; box-shadow:var(--shadow); }
+  legend { display:block; margin:0 -16px 12px; padding:12px 16px; font-weight:700; font-size:14px; color:#fff;
+    background:linear-gradient(90deg,#e8564a,#ef7a5c); letter-spacing:.04em; border-radius:16px 16px 0 0; }
+  .row { display:grid; grid-template-columns: 7.2em 1fr; align-items:center; gap:8px; margin:8px 0; }
+  label { color:var(--muted); font-size:14px; }
+  input, select { width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:10px; font:inherit; background:#fff; color:var(--ink); }
+  input:focus-visible, select:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  .hint { font-size:12.5px; color:var(--muted); margin:2px 0 0; }
+  .col-input form { grid-template-columns: 1fr; }
+  .actions { grid-column: 1 / -1; display:flex; gap:12px; align-items:center; margin-top:4px; }
+  button { font:inherit; padding:9px 18px; border-radius:8px; border:1px solid var(--accent); background:var(--accent); color:#fff; cursor:pointer; }
+  button.ghost { background:#fff; color:var(--accent); }
+  button:focus-visible { outline:2px solid var(--ink); outline-offset:2px; }
+  .err { color:#a1201f; font-size:14px; }
+  section { margin-top:34px; }
+  h2 { font-size:18px; margin:0 0 4px; }
+  .sectionnote { color:var(--muted); font-size:13.5px; margin:0 0 14px; }
+  .card { background:var(--card); border:0; border-radius:14px; padding:16px 18px; margin:10px 0; box-shadow:var(--shadow); }
+  .card h3 { margin:0 0 6px; font-size:15px; color:var(--muted); font-weight:600; letter-spacing:.02em; }
+  .big { font-size:26px; font-weight:700; margin:2px 0 6px; }
+  .big .unit { font-size:15px; font-weight:500; color:var(--muted); margin-left:4px; }
+  .why { color:var(--muted); font-size:13.5px; margin:0; }
+  .tips { margin:8px 0 0; padding-left:20px; }
+  .tips li { margin:6px 0; }
+  .tag { display:inline-block; font-size:12px; padding:1px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted); margin-left:8px; vertical-align:middle; }
+  .skillbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:0 0 10px; }
+  .skillbar input[type="search"] { flex:1 1 220px; }
+  .skillbar select { flex:0 0 130px; }
+  #dmgWrap .skillbar select { flex:1 1 220px; min-width:180px; }
+  .skillmeta { color:var(--muted); font-size:12.5px; }
+  .skilllist { list-style:none; margin:0; padding:0; border:0; border-radius:14px; overflow:hidden; background:var(--card); box-shadow:var(--shadow); }
+  .skillrow { display:grid; grid-template-columns: 1fr auto auto auto; gap:10px; align-items:center; padding:9px 14px; border-top:1px solid var(--line); }
+  .skillrow:first-child { border-top:0; }
+  .skillrow .nm { font-weight:600; }
+  .skillrow .pill { font-size:12px; color:var(--muted); border:1px solid var(--line); border-radius:999px; padding:0 8px; }
+  .skillrow button { padding:4px 10px; font-size:13px; }
+  .more { color:var(--muted); font-size:13px; margin:8px 0 0; }
+  .calcpair { display:grid; grid-template-columns: 1fr 1fr; gap:14px; margin-bottom:12px; }
+  @media (max-width: 680px) { .calcpair { grid-template-columns: 1fr; } }
+  .calcside { border:0; border-radius:14px; padding:12px 14px 14px; background:var(--card); box-shadow:var(--shadow); }
+  .calcside h3 { margin:0 0 10px; font-size:13px; color:var(--muted); font-weight:600; display:flex; align-items:center; gap:7px; }
+  .dot { width:9px; height:9px; border-radius:50%; display:inline-block; }
+  .badges { display:flex; gap:6px; flex-wrap:wrap; margin:-4px 0 8px; min-height:20px; }
+  .badge { font-size:12px; padding:2px 9px; border-radius:999px; background:#eef0f4; color:#4a4a55; }
+  .badge.power { background:#ffe9e5; color:#b8382b; }
+  .badge.type { background:#e8f0ff; color:#2f5aa8; }
+  .dot-me { background:#e8564a; }
+  .dot-foe { background:#3b6fb4; }
+  .calcside select { width:100%; margin-bottom:8px; }
+  .statgrid { display:grid; grid-template-columns: repeat(2, 1fr); gap:4px 14px; font-size:13px; }
+  .statgrid div.statrow { display:flex; justify-content:space-between; border-bottom:1px solid #f1f1f4; padding:3px 0; }
+  .statgrid span { color:var(--muted); }
+  .statgrid b { font-weight:600; color:var(--ink); }
+  .calcresult { border:0; border-radius:14px; padding:14px 16px; background:var(--card); box-shadow:var(--shadow); }
+  .calcresult .big { margin:0; }
+  .hpbar { height:10px; border-radius:999px; background:#ececef; overflow:hidden; margin:10px 0 8px; }
+  .hpbar i { display:block; height:100%; background:var(--accent); width:0; transition:width .25s ease; }
+  .ko { font-size:13.5px; color:var(--muted); }
+  .ko b { color:var(--accent); }
+  .simtable { width:100%; border-collapse:collapse; font-size:13.5px; margin-top:10px; }
+  .simtable th, .simtable td { border-bottom:1px solid var(--line); padding:6px 8px; text-align:right; }
+  .simtable th:first-child, .simtable td:first-child { text-align:left; }
+  .simtable th { color:var(--muted); font-weight:600; }
+  .simtable tr.ko td { color:#a1201f; font-weight:600; }
+  [hidden] { display:none !important; }
+  .reveal { opacity:0; transform:translateY(6px); transition:opacity .28s ease, transform .28s ease; }
+  .reveal.on { opacity:1; transform:none; }
+  details { margin-top:34px; border-top:1px solid var(--line); padding-top:12px; color:var(--muted); font-size:13.5px; }
+  summary { cursor:pointer; }
+  details dt { font-weight:600; color:var(--ink); margin-top:8px; }
+  details dd { margin:2px 0 0 0; }
+</style>
+</head>
+<body>
+<noscript><p style="margin:16px;padding:12px;border:1px solid #a1201f;color:#a1201f;border-radius:8px">
+这个页面要用浏览器打开，并且允许运行脚本。如果你是在预览窗口里看，请下载后用 Edge / Chrome 打开 index.html。</p></noscript>
+<main>
+  <div class="appbar">
+    <div class="appbar-title">洛克王国 · 局面速算</div>
+    <div class="segmented" role="tablist">
+      <button type="button" class="seg on" data-jump="form">局面</button>
+      <button type="button" class="seg" data-jump="dmgWrap">伤害</button>
+      <button type="button" class="seg" data-jump="simWrap">推演</button>
+      <a class="seg" href="calculator.html" style="text-decoration:none">计算器页</a>
+    </div>
+  </div>
+  <h1>洛克王国 PVP 局面速算</h1>
+  <p class="sub">填一次当前局面，看清三件事：还差几次击杀、对手还能撑几轮不聚能、这轮先手归谁。工具只把局面讲清楚，出招由你决定。</p>
+
+  <div class="workbench">
+  <div class="col-input">
+  <form id="form" novalidate>
+    <fieldset>
+      <legend>我方</legend>
+      <div class="row"><label for="me-preset">精灵（填速度）</label><select id="me-preset"><option value="">自己填</option></select></div>
+      <div class="row"><label for="me-role">这只的任务</label><select id="me-role">
+        <option value="">未标</option>
+        <option value="info">状态 / 信息位</option>
+        <option value="tank">接压 / 联防位</option>
+        <option value="sweep">收割位</option>
+      </select></div>
+      <div class="row"><label for="me-action">这轮打算</label><select id="me-action">
+        <option value="attack">出招</option>
+        <option value="switch">换人</option>
+        <option value="charge">聚能</option>
+        <option value="counter_guard">防御类应对（吃攻击）</option>
+        <option value="counter_strike">攻击类应对（吃状态）</option>
+        <option value="counter_break">状态类应对（吃防御）</option>
+      </select></div>
+      <div class="row"><label for="me-mana">魔力值</label><input id="me-mana" type="number" min="0" max="4" step="1" value="4"></div>
+      <div class="row"><label for="me-hp">当前血量</label><input id="me-hp" type="number" min="0" step="1" value="260"></div>
+      <div class="row"><label for="me-energy">星星能量</label><input id="me-energy" type="number" min="0" max="10" step="1" value="5"></div>
+      <div class="row"><label for="me-speed">速度</label><input id="me-speed" type="number" min="0" step="1" value="118"></div>
+      <div class="row"><label for="me-priority">先手值</label><input id="me-priority" type="number" step="1" value="0"></div>
+      <div class="row"><label for="me-dmg">本回合可打伤害</label><input id="me-dmg" type="number" min="0" step="1" value="120"></div>
+      <p class="hint">伤害按你常用的一个技能估，够用来判断“这轮能不能直接打倒对面这只”。魔力值满 4 点，能量上限 10 点。</p>
+    </fieldset>
+
+    <fieldset>
+      <legend>对手</legend>
+      <div class="row"><label for="foe-preset">精灵（填速度）</label><select id="foe-preset"><option value="">自己填</option></select></div>
+      <div class="row"><label for="foe-role">这只的任务</label><select id="foe-role">
+        <option value="">未标</option>
+        <option value="info">状态 / 信息位</option>
+        <option value="tank">接压 / 联防位</option>
+        <option value="sweep">收割位</option>
+      </select></div>
+      <div class="row"><label for="foe-action">对手这轮</label><select id="foe-action">
+        <option value="attack">出招 · 攻击</option>
+        <option value="defense">出招 · 防御</option>
+        <option value="status">出招 · 状态</option>
+        <option value="switch">换人</option>
+        <option value="charge">聚能</option>
+        <option value="unknown">不确定</option>
+      </select></div>
+      <div class="row"><label for="foe-mana">魔力值</label><input id="foe-mana" type="number" min="0" max="4" step="1" value="4"></div>
+      <div class="row"><label for="foe-hp">当前血量</label><input id="foe-hp" type="number" min="0" step="1" value="180"></div>
+      <div class="row"><label for="foe-energy">星星能量</label><input id="foe-energy" type="number" min="0" max="10" step="1" value="4"></div>
+      <div class="row"><label for="foe-speed">速度</label><input id="foe-speed" type="number" min="0" step="1" value="96"></div>
+      <div class="row"><label for="foe-priority">先手值</label><input id="foe-priority" type="number" step="1" value="0"></div>
+      <div class="row"><label for="foe-burn">对手每回合耗能</label><input id="foe-burn" type="number" min="0" step="1" value="2"></div>
+      <p class="hint">对手每回合大概花掉多少星星能量；不确定就在下面技能速查里点一下。能量耗尽后他要花一整轮聚能，回 5 点。</p>
+    </fieldset>
+
+    <div class="actions">
+      <button type="submit">开始分析</button>
+      <button type="button" class="ghost" id="reset">清空重填</button>
+      <span class="err" id="err" role="alert"></span>
+    </div>
+  </form>
+  </div>
+
+  <div class="col-result">
+  <section id="stage1" hidden aria-live="polite">
+    <h2>第一步 · 看清局面</h2>
+    <p class="sectionnote">三张卡片依次出现，每张只回答一个问题。</p>
+    <div class="card reveal" id="c1">
+      <h3>① 还差几次击杀</h3>
+      <p class="big"><span id="kills-now">–</span><span class="unit" id="kills-unit">次</span><span class="tag" id="kills-tag" hidden></span></p>
+      <p class="why" id="kills-why"></p>
+    </div>
+    <div class="card reveal" id="c2">
+      <h3>② 对手还能撑几轮不聚能</h3>
+      <p class="big"><span id="sustain">–</span><span class="unit">轮</span></p>
+      <p class="why" id="sustain-why"></p>
+    </div>
+    <div class="card reveal" id="c3">
+      <h3>③ 这轮先手归谁</h3>
+      <p class="big" id="initiative">–</p>
+      <p class="why" id="initiative-why"></p>
+    </div>
+  </section>
+
+  <section id="stage2" hidden aria-live="polite">
+    <h2>第二步 · 该怎么想</h2>
+    <p class="sectionnote">这里只给判断和提示，不替你出招。</p>
+    <div class="card reveal" id="c4">
+      <h3>④ 现在是什么局面</h3>
+      <p class="big" id="gametype">–</p>
+      <p class="why" id="gametype-why"></p>
+    </div>
+    <div class="card reveal" id="c5">
+      <h3>⑤ 这回合先盯什么</h3>
+      <p class="big" id="focus">–</p>
+      <p class="why" id="focus-why"></p>
+    </div>
+    <div class="card reveal" id="c6">
+      <h3>⑥ 可以怎么想</h3>
+      <ul class="tips" id="tips"></ul>
+    </div>
+  </section>
+
+
+  <section id="skillSection">
+    <h2>技能速查</h2>
+    <p class="sectionnote">共 <span id="skillTotal">0</span> 个技能。搜到对手常用的那个，一点就把它的耗能填进上面的计算器。</p>
+    <div class="skillbar">
+      <input type="search" id="skillSearch" placeholder="输入技能名、属性或效果，例如“盛开”“草”“威力+60”" aria-label="搜索技能">
+      <select id="skillType" aria-label="按类型筛选">
+        <option value="">全部类型</option>
+        <option value="物攻">物攻</option>
+        <option value="魔攻">魔攻</option>
+        <option value="状态">状态</option>
+        <option value="防御">防御</option>
+      </select>
+      <span class="skillmeta" id="skillCount"></span>
+    </div>
+    <ul class="skilllist" id="skillList"></ul>
+    <p class="more" id="skillMore" hidden></p>
+  </section>
+
+
+  <details id="speedWrap">
+    <summary>速度榜（<span id="speedTotal">0</span> 只，来源 bwiki《PVP一速榜》，理论满速）</summary>
+    <div class="skillbar" style="margin-top:12px">
+      <input type="search" id="speedSearch" placeholder="输入精灵名，例如“噼啪鸟”“火神”" aria-label="搜索精灵速度">
+      <span class="skillmeta" id="speedCount"></span>
+    </div>
+    <ul class="skilllist" id="speedList"></ul>
+    <p class="more" id="speedMore" hidden></p>
+  </details>
+
+
+  <details id="dmgWrap">
+    <summary>伤害试算（要先拿一次真实伤害校准）</summary>
+    <div class="calcpair" style="margin-top:12px">
+      <div class="calcside">
+        <h3 class="side-head"><i class="dot dot-me"></i>我方</h3>
+        <select id="dmg-me" aria-label="我方精灵"></select>
+        <select id="dmg-skill" aria-label="技能"></select>
+        <div class="badges" id="dmg-skill-badges"></div>
+        <select id="dmg-me-nature" aria-label="我方性格"></select>
+        <div class="skillbar" style="gap:8px">
+          <label class="skillmeta">等级 <input id="dmg-me-level" type="number" min="1" max="100" value="60" style="width:56px"></label>
+          <label class="skillmeta">星级 <input id="dmg-me-star" type="number" min="0" max="5" value="5" style="width:48px"></label>
+          <label class="skillmeta">个体 <input id="dmg-me-iv" type="number" min="0" max="10" value="10" style="width:48px"></label>
+        </div>
+        <div class="statgrid" id="dmg-me-stats"></div>
+        <div class="hpbar"><i id="dmg-me-bar"></i></div>
+      </div>
+      <div class="calcside">
+        <h3 class="side-head"><i class="dot dot-foe"></i>对手</h3>
+        <select id="dmg-foe" aria-label="对手精灵"></select>
+        <select id="dmg-foe-nature" aria-label="对手性格"></select>
+        <div class="skillbar" style="gap:8px">
+          <label class="skillmeta">等级 <input id="dmg-foe-level" type="number" min="1" max="100" value="60" style="width:56px"></label>
+          <label class="skillmeta">星级 <input id="dmg-foe-star" type="number" min="0" max="5" value="5" style="width:48px"></label>
+          <label class="skillmeta">个体 <input id="dmg-foe-iv" type="number" min="0" max="10" value="10" style="width:48px"></label>
+        </div>
+        <div class="statgrid" id="dmg-foe-stats"></div>
+        <div class="hpbar"><i id="dmg-foe-bar"></i></div>
+      </div>
+    </div>
+    <div class="skillbar">
+      <label class="skillmeta">系数 <input id="dmg-k" type="number" step="0.001" min="0" placeholder="未校准" style="width:90px"></label>
+      <label class="skillmeta">实测伤害 <input id="dmg-real" type="number" step="1" min="0" placeholder="打一下记下来" style="width:110px"></label>
+      <button type="button" class="ghost" id="dmg-calibrate">用这一下校准</button>
+      <button type="button" id="dmg-apply">算出来填进表单</button>
+    </div>
+    <div class="skillbar">
+      <label class="skillmeta">对手这轮减伤 <select id="dmg-def" style="min-width:200px"></select></label>
+      <label class="skillmeta">连击数 <input id="dmg-hits" type="number" min="1" step="1" value="1" style="width:70px"></label>
+    </div>
+    <div class="skillbar">
+      <label class="skillmeta">敌方星陨印记 <input id="stack-star" type="number" min="0" step="1" value="0" style="width:60px"></label>
+      <label class="skillmeta">敌方中毒层数 <input id="stack-poison" type="number" min="0" step="1" value="0" style="width:60px"></label>
+      <label class="skillmeta">敌方增益层数 <input id="stack-buff" type="number" min="0" step="1" value="0" style="width:60px"></label>
+    </div>
+    <div class="skillbar">
+      <label class="skillmeta">我方攻击印记 <input id="st-atkmarks" type="number" min="0" step="1" value="0" style="width:56px"></label>
+      <label class="skillmeta">我方风起层数 <input id="st-wind" type="number" min="0" step="1" value="0" style="width:56px"></label>
+      <label class="skillmeta">蓄势 <select id="st-charge" style="min-width:120px">
+        <option value="">没有</option>
+        <option value="1">有（威力+30%，能耗+1）</option>
+      </select></label>
+      <label class="skillmeta">天气 <select id="st-weather" style="min-width:170px">
+        <option value="">无</option>
+        <option value="rain">下雨（水系技能 +75%）</option>
+        <option value="sand">沙暴（地系能耗减半）</option>
+        <option value="snow">暴风雪（每回合 2 层冻结）</option>
+        <option value="thunder">雷鸣（每回合 1 层引电）</option>
+      </select></label>
+    </div>
+    <div class="skillbar">
+      <label class="skillmeta">对手灼烧 <input id="st-burn" type="number" min="0" step="1" value="0" style="width:56px"></label>
+      <label class="skillmeta">对手寄生 <input id="st-leech" type="number" min="0" step="1" value="0" style="width:56px"></label>
+      <label class="skillmeta">对手冻结 <input id="st-freeze" type="number" min="0" step="1" value="0" style="width:56px"></label>
+      <label class="skillmeta">对手引电 <input id="st-shock" type="number" min="0" step="1" value="0" style="width:56px"></label>
+    </div>
+    <div class="calcresult">
+      <p class="big"><span id="dmg-value">–</span><span class="unit">点伤害</span></p>
+      <div class="hpbar"><i id="dmg-bar"></i></div>
+      <p class="ko" id="dmg-ko">填好上面的数字后，这里会给伤害、占对手剩余血量的比例，以及“几发打倒”。</p>
+    </div>
+    <p class="hint" id="trait-line"></p>
+    <p class="hint" id="dmg-out">先选双方精灵和技能，再填一次你打出来的真实伤害按“校准”。系数会记在这个浏览器里，下次接着用。</p>
+  </details>
+
+  <details id="simWrap">
+    <summary>回合推演（3–5 回合）</summary>
+    <div class="skillbar" style="margin-top:12px">
+      <label class="skillmeta">回合数 <select id="sim-turns" style="width:90px"><option>3</option><option>4</option><option>5</option></select></label>
+      <label class="skillmeta">对手每回合打你 <input id="sim-foe-dmg" type="number" min="0" step="1" value="0" style="width:90px"></label>
+      <label class="skillmeta">我方替补 <select id="sim-me-bench" style="min-width:150px"><option value="">没有</option></select></label>
+      <label class="skillmeta">对手替补 <select id="sim-foe-bench" style="min-width:150px"><option value="">没有</option></select></label>
+      <button type="button" id="sim-run">推演</button>
+    </div>
+    <table class="simtable" id="sim-plan"></table>
+    <p class="hint" id="sim-note">推演假设：双方每回合各自出招（能量不够就聚能，聚能回 5 点），按先手顺序结算，回合结束再结算中毒/灼烧/寄生。</p>
+    <table class="simtable" id="sim-table"></table>
+  </details>
+
+  <details>
+    <summary>计算口径（数字是怎么来的）</summary>
+    <dl>
+      <dt>还差几次击杀</dt>
+      <dd>魔力值满 4 点：对手每被击败一只精灵掉 1 点，归零即输。所以“还差几次击杀”＝对手当前魔力值；如果这一击就能打倒场上这只（可打伤害 ≥ 对手血量），答案再减 1。</dd>
+      <dt>对手还能撑几轮不聚能</dt>
+      <dd>每只精灵能量上限 10 点，用技能花 2—5 点，耗尽后要花一整轮“聚能”回 5 点。这里用 对手能量 ÷ 每回合耗能 向下取整，算出他还能连续出招几轮。</dd>
+      <dt>这轮先手归谁</dt>
+      <dd>行动顺序是 <b>应对 &gt; 换人 &gt; 先手值 &gt; 速度</b>。应对抓对类型时有必定先手；换人几乎总是当场最先结算，即使你比对手慢，主动换人通常也是你先完成替换、对手再出招；但换人消耗本回合行动，新上场的精灵会直接暴露在对手这一下的攻击里（除非用带“脱离”的技能换下）。</dd>
+      <dt>应对怎么算</dt>
+      <dd>技能分攻击、防御、状态三类，克制循环是：<b>攻击应对状态、状态应对防御、防御应对攻击</b>。抓对类型即应对成功，拿必定先手和额外效果：防御类（吃攻击）通常减伤 70% 并带一回合冷却；攻击类（吃状态）打断对方、回能量，部分技能带 2.5 倍应对伤害且没冷却；状态类（吃防御）无视减伤。抓错就按普通出招算。</dd>
+      <dt>换人的细节</dt>
+      <dd>换人本身没有全局冷却（“冷却”来自技能）；双方同时换人时，速度快的先站场；换上来的精灵血量独立计算、不继承前一只，但会继承场地印记；对手带“棘刺”类效果时，你每次换人都会掉血。这些目前只写在说明里，没有进入计算。</dd>
+      <dt>“这只的任务”</dt>
+      <dd>你自己标：状态/信息位负责试探和压首轮能量，接压/联防位负责吃伤害和打断对方能量循环，收割位负责在对手进斩杀线时收人。标了之后，第二步的提示会先按这个任务说话；不标就只看数字。</dd>
+      <dt>样例精灵数据</dt>
+      <dd>下拉里的数值是样例，用来把流程跑通，请按你自己的实测替换；填“自己填”就完全手动。</dd>
+    </dl>
+  </details>
+</main>
+
+<script id="calc-core">
+  function toNum(v) {
+    var n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function clampNonNeg(n) { return n < 0 ? 0 : n; }
+
+  function compute(raw) {
+    var me = {
+      mana: clampNonNeg(toNum(raw.me.mana)),
+      hp: clampNonNeg(toNum(raw.me.hp)),
+      energy: clampNonNeg(toNum(raw.me.energy)),
+      speed: clampNonNeg(toNum(raw.me.speed)),
+      priority: toNum(raw.me.priority),
+      dmg: clampNonNeg(toNum(raw.me.dmg)),
+      role: raw.me.role || "",
+      action: raw.me.action || "attack"
+    };
+    var foe = {
+      mana: clampNonNeg(toNum(raw.foe.mana)),
+      hp: clampNonNeg(toNum(raw.foe.hp)),
+      energy: clampNonNeg(toNum(raw.foe.energy)),
+      speed: clampNonNeg(toNum(raw.foe.speed)),
+      priority: toNum(raw.foe.priority),
+      burn: clampNonNeg(toNum(raw.foe.burn)),
+      role: raw.foe.role || "",
+      intent: raw.foe.action || "attack",
+      action: (raw.foe.action === "switch" || raw.foe.action === "charge") ? raw.foe.action : "attack"
+    };
+
+    var needed = Math.floor(foe.mana);
+    var canKillNow = me.dmg > 0 && me.dmg >= foe.hp;
+    var remaining = clampNonNeg(needed - (canKillNow ? 1 : 0));
+
+    var turns;
+    if (foe.burn <= 0) turns = Infinity;
+    else turns = Math.floor(foe.energy / foe.burn);
+
+    // 行动顺序：应对 > 换人 > 先手值 > 速度
+    var mySwitch = me.action === "switch";
+    var foeSwitch = foe.action === "switch";
+    var myCounter = me.action.indexOf("counter_") === 0;
+    var counterWin =
+      (me.action === "counter_guard" && foe.intent === "attack") ||
+      (me.action === "counter_strike" && foe.intent === "status") ||
+      (me.action === "counter_break" && foe.intent === "defense");
+    var who, kind;
+    if (counterWin) {
+      who = "me";
+      kind = "counter";
+    } else if (mySwitch !== foeSwitch) {
+      who = mySwitch ? "me" : "foe";
+      kind = "switch";
+    } else if (me.priority !== foe.priority) {
+      who = me.priority > foe.priority ? "me" : "foe";
+      kind = "priority";
+    } else if (me.speed !== foe.speed) {
+      who = me.speed > foe.speed ? "me" : "foe";
+      kind = "speed";
+    } else {
+      who = "tie";
+      kind = "tie";
+    }
+
+    return {
+      kills: { needed: needed, remaining: remaining, canKillNow: canKillNow, myDmg: me.dmg, foeHp: foe.hp },
+      sustain: { turns: turns, burn: foe.burn, energy: foe.energy },
+      roles: { me: me.role, foe: foe.role },
+      initiative: { owner: who, kind: kind, myPriority: me.priority, foePriority: foe.priority, mySpeed: me.speed, foeSpeed: foe.speed, mySwitch: mySwitch, foeSwitch: foeSwitch },
+      actions: { me: me.action, foe: foe.action },
+      counter: { picked: myCounter ? me.action : null, win: counterWin, intent: foe.intent }
+    };
+  }
+
+  function judge(res) {
+    var k = res.kills, s = res.sustain, ini = res.initiative.owner;
+    var gameType, gameWhy, focus, focusWhy, tips = [];
+
+    var acts = res.actions || {};
+    var foeDry = s.burn > 0 && s.energy < s.burn;
+    var foeThin = s.burn > 0 && s.turns <= 2 && s.turns >= 1;
+    var hitLine = "你能打 " + k.myDmg + "，对面这只还剩 " + k.foeHp + " 血";
+
+    var ctr = res.counter || {};
+    if (ctr.win) {
+      gameType = "应对成功";
+      gameWhy = ctr.picked === "counter_guard"
+        ? "他这轮出的是攻击，你的防御类应对正好抓到：减伤 70%，而且必定先手。"
+        : ctr.picked === "counter_strike"
+          ? "他这轮出的是状态技，你的攻击类应对正好抓到：打断、回能量，而且必定先手。"
+          : "他这轮出的是防御，你的状态类应对正好抓到：无视减伤，而且必定先手。";
+      focus = "把这一下换成实际收益";
+      focusWhy = "应对成功只买来“这次我先结算”，能不能换成血量或节奏，还要看你这下打掉多少、以及下一轮能不能接上。";
+      tips.push(ctr.picked === "counter_guard"
+        ? "防御类应对通常有一回合冷却，这轮用完，下轮要按“没有应对”来准备。"
+        : "这类应对没有冷却，只要能量够，下轮还能继续压他的同类动作。");
+      tips.push("他这轮已经亮出了类型，下轮大概率会换一种，别再照同一个赌。");
+    } else if (acts.me === "switch") {
+      gameType = "换人轮";
+      gameWhy = "你这轮把行动花在换人上：不出招，场上这只不挨打，但刚换上的那只要吃下对手这一下（除非用带“脱离”的技能换下）。";
+      focus = "先想清楚换上来要接什么";
+      focusWhy = "换人的价值是躲开这一下、换对位；代价是白送一轮输出，" + (k.canKillNow ? "而你这一下本来是能打倒对面这只的。" : "对面还差 " + k.remaining + " 次击杀没变。");
+      tips.push("确认新上场的这只血量吃得下他这一下，不然等于换个更脆的来挨打。");
+      tips.push("换人排在先手值和速度之前，所以你一定先完成替换；但正因如此，挨打也一定落在新上场的这只身上。");
+    } else if (acts.foe === "switch") {
+      gameType = "对手换人轮";
+      gameWhy = "对手把这轮花在换人上：他不出招，你打的是他刚换上的那只。";
+      focus = "打他刚换上的，还是先做别的";
+      focusWhy = "他换人躲掉了对现在这只的压力，但新上场的这只血量、属性、速度都是新的；你这一下的收益可能比原来高，也可能被属性吃掉。";
+      tips.push("先想他为什么换：是被你打怕了，还是在提前对位。");
+      tips.push("他这轮不出招，你可以白打一轮，但别把能量全交在属性不利的目标上。");
+    } else if (k.canKillNow && ini === "me") {
+      gameType = "斩杀窗口";
+      gameWhy = "你先手，" + hitLine + "，这一下就能打倒。对面魔力值 " + k.needed + "，收掉这只就只剩 " + Math.max(0, k.needed - 1) + "。";
+      focus = "先把这只收掉";
+      focusWhy = "收掉后对手魔力值降到 " + Math.max(0, k.needed - 1) + "，还差 " + Math.max(0, k.needed - 1) + " 次击杀；他下一只上场，局面要重新算。";
+      tips.push("先想一下对面这轮会不会防御或减伤；会的话这一下可能打不掉，" + k.myDmg + " 就白交了。");
+      tips.push("收掉之后别松，对面新上场的精灵血量和速度都是新的，不能用现在这组数字接着算。");
+      tips.push("这轮你先手，主动在你手上：先算清楚再点。");
+    } else if (k.canKillNow && ini === "foe") {
+      gameType = "后手抢杀";
+      gameWhy = "你这一下能打倒对面（" + hitLine + "），但先手在对面，他会先动一步。";
+      focus = "先扛住对面这一下";
+      focusWhy = "只要你这只没倒，轮到你就能收掉他，对手魔力值掉到 " + Math.max(0, k.needed - 1) + "。";
+      tips.push("对面先手，最可能是抢先收掉你这只；你这只的血量是关键。");
+      tips.push("撑不住的话，换一只更耐打的上来，比硬换血划算。");
+      tips.push("这轮对面先手，先看他出什么再决定，别提前把技能交出去。");
+    } else if (foeDry) {
+      gameType = "对面要断能量";
+      gameWhy = "对手只剩 " + s.energy + " 点星星能量，不够放一次技能（每回合要花 " + s.burn + " 点），这回合多半得聚能。";
+      focus = "别浪费这个空档";
+      focusWhy = "聚能那回合对手不出招，你可以白打一轮，或者趁机把他的血量压到下一击的线。";
+      tips.push("对手聚能时不会攻击，这一轮你可以放心输出或调整状态。");
+      tips.push("他聚能后会回上一截能量，下一轮就能再出招，别把节奏拖回去。");
+      tips.push("这轮先把伤害打出去，别自己跟着聚能。");
+    } else if (foeThin) {
+      gameType = "压制期";
+      gameWhy = "对手还能撑 " + s.turns + " 轮不聚能（" + s.energy + " 点能量 ÷ 每轮 " + s.burn + " 点），第 " + (s.turns + 1) + " 轮就得聚能。";
+      focus = "把对手逼到聚能";
+      focusWhy = "再压 " + s.turns + " 轮，对手能量就见底；这期间别让他找到机会反打。";
+      tips.push((s.turns === 1 ? "这一轮" : "这 " + s.turns + " 轮") + "里保持压力，但别自己先断能量。");
+      tips.push("算好他能量见底那一轮，提前准备好收人。");
+      tips.push("你还差 " + k.remaining + " 次击杀，节奏别乱。");
+    } else {
+      gameType = "常规对拼";
+      gameWhy = "双方都还有余量：对手能撑 " + s.turns + " 轮，你还差 " + k.remaining + " 次击杀。";
+      focus = "先算清这轮的交换";
+      focusWhy = "这轮打完双方各剩多少能量、你还差几次击杀，比一时的伤害更重要。";
+      tips.push("这轮打完对手大概还剩 " + s.turns + " 轮能量，别急着一次性交光。");
+      tips.push("记住你还差 " + k.remaining + " 次击杀，别为了打伤害把自己能量打空。");
+    }
+
+    var extra = [];
+    var actionTip = buildActionTip(res);
+    if (res.counter && res.counter.picked && !res.counter.win) {
+      actionTip = "你这轮选了应对，但他出的不是你能吃的那类（他这轮：" + foeIntentText(res.counter.intent) + "），应对不生效，按普通出招算。 " + actionTip;
+    }
+    if (actionTip) extra.push(actionTip);
+    var roleTip = buildRoleTip(res);
+    if (roleTip) extra.push(roleTip);
+
+    if (ini === "me" && gameType !== "斩杀窗口") extra.push("这轮你先手，可以主动选择打还是稳一手。");
+    else if (ini === "foe" && gameType !== "后手抢杀") extra.push("这轮对面先手，先看他出什么再决定。");
+    else if (ini === "tie") extra.push("双方先手值、速度都一样，这轮谁先动由系统随机，别把计划压在“我一定能先手”上。");
+
+    var seen = {};
+    tips = tips.slice(0, 2).concat(extra).filter(function (t) { if (seen[t]) return false; seen[t] = 1; return true; });
+    return { gameType: gameType, gameWhy: gameWhy, focus: focus, focusWhy: focusWhy, tips: tips.slice(0, 3) };
+  }
+
+  function foeIntentText(intent) {
+    return { attack: "攻击", defense: "防御", status: "状态", switch: "换人", charge: "聚能", unknown: "不确定" }[intent] || "不确定";
+  }
+
+  function buildActionTip(res) {
+    var acts = res.actions || {};
+    var parts = [];
+    if (acts.me === "switch") parts.push("你这轮换人：躲开了现在这只的伤害，但新上场的精灵会白吃对手这一下，除非换下时用的技能带“脱离”。");
+    else if (acts.me === "charge") parts.push("你这轮聚能：不出招、回 5 点能量，但要先把“白送一轮”算进交换里。");
+    if (acts.foe === "switch") parts.push("对手这轮换人：他刚换上的那只得先吃你一下，想好打谁再交技能。");
+    if (acts.foe === "charge") parts.push("对手这轮聚能：他不出招，这一轮你可以白打。");
+    else if (acts.foe === "charge") parts.push("对手这轮聚能：他不出招，这一轮你可以白打。");
+    return parts.join(" ");
+  }
+
+  function buildRoleTip(res) {
+    var k = res.kills, s = res.sustain;
+    var roles = res.roles || {};
+    var turnsText = s.turns === Infinity ? "很多" : s.turns;
+    var parts = [];
+
+    if (roles.me === "info") {
+      parts.push("你是信息位：这轮先试探他常用的技能和能量（他还剩 " + turnsText + " 轮），问出底牌比换血更值。");
+    } else if (roles.me === "tank") {
+      parts.push("你是接压位：这轮的任务是接住他这一下、打断他的能量循环（他还剩 " + turnsText + " 轮），别跟他抢伤害。");
+    } else if (roles.me === "sweep") {
+      parts.push(k.canKillNow
+        ? "你是收割位，他只剩 " + k.foeHp + " 血、你能打 " + k.myDmg + "，这轮就是兑现的时候。"
+        : "你是收割位，但他还有 " + k.foeHp + " 血、你只能打 " + k.myDmg + "，这轮别硬上，等队友把他压进线。");
+    }
+
+    if (roles.foe === "sweep") parts.push("对面是收割位，他在等你血量掉进他的线，别自己送进去。");
+    else if (roles.foe === "info") parts.push("对面是信息位，他可能在试探，不用急着亮底牌。");
+    else if (roles.foe === "tank") parts.push("对面是联防位，多半会切上来吃伤害，打他要想好换人的成本。");
+
+    return parts.join(" ");
+  }
+
+  // 属性公式（来源：《洛克王国：世界》属性计算公式）
+  // S=种族资质 I=个体(0-10) SS=星级 IK=I×(1+SS) C=性格系数（增益 1.1+0.02SS / 减益 0.9）
+  function natureFactor(nature, statName, stars) {
+    if (!nature) return 1;
+    if (nature.up === statName) return 1.1 + 0.02 * stars;
+    if (nature.down === statName) return 0.9;
+    return 1;
+  }
+
+  function computeStats(pet, opts) {
+    var L = Number(opts.level) || 60;
+    var SS = Number(opts.stars);
+    if (!Number.isFinite(SS)) SS = 5;
+    var I = Number(opts.iv);
+    if (!Number.isFinite(I)) I = 10;
+    var IK = I * (1 + SS);
+    var C = {
+      hp: natureFactor(opts.nature, "生命", SS),
+      atk: natureFactor(opts.nature, "物攻", SS),
+      ma: natureFactor(opts.nature, "魔攻", SS),
+      def: natureFactor(opts.nature, "物防", SS),
+      md: natureFactor(opts.nature, "魔防", SS),
+      spe: natureFactor(opts.nature, "速度", SS)
+    };
+    function nonHp(S, stat) {
+      var inner = Math.round((0.01 * L + 0.5) * (S + 0.5 * IK) + 10);
+      return 10 * SS + Math.round(C[stat] * inner);
+    }
+    var hpInner = Math.round((0.02 * L + 0.5) * (pet.hp + 0.5 * IK) + L + 10);
+    return {
+      hp: 20 * SS + Math.round(C.hp * hpInner),
+      atk: nonHp(pet.atk, "atk"),
+      ma: nonHp(pet.ma, "ma"),
+      def: nonHp(pet.def, "def"),
+      md: nonHp(pet.md, "md"),
+      spe: nonHp(pet.spe, "spe")
+    };
+  }
+
+  // 回合推演：支持每回合策略（出招 / 聚能 / 换人），每侧最多两只精灵
+  function simulate(opts) {
+    function makeSide(slots) {
+      return {
+        slots: slots.map(function (sp) {
+          return {
+            hp: Math.max(0, sp.hp), max: Math.max(1, sp.max),
+            energy: Math.max(0, sp.energy), cost: Math.max(0, sp.cost),
+            dmg: Math.max(0, sp.dmg)
+          };
+        }),
+        active: 0,
+        mana: Math.max(0, slots.mana || 0)
+      };
+    }
+    var me = makeSide(Object.assign([], opts.meSlots));
+    me.mana = Math.max(0, opts.meMana || 0);
+    var foe = makeSide(Object.assign([], opts.foeSlots));
+    foe.mana = Math.max(0, opts.foeMana || 0);
+
+    var st = {
+      poison: Math.max(0, opts.poison || 0),
+      burn: Math.max(0, opts.burn || 0),
+      leech: Math.max(0, opts.leech || 0)
+    };
+    var plan = opts.plan || [];
+    var rows = [];
+    var turns = Math.max(1, Math.min(5, opts.turns || 3));
+    var over = null;
+
+    function cur(side) { return side.slots[side.active]; }
+    function alive(side, i) { return side.slots[i] && side.slots[i].hp > 0; }
+    function nextAlive(side) {
+      for (var i = 0; i < side.slots.length; i++) if (i !== side.active && alive(side, i)) return i;
+      return -1;
+    }
+    function ko(side) {
+      if (side.mana > 0) side.mana -= 1;
+      var next = nextAlive(side);
+      if (next >= 0) { side.active = next; return "被迫换人"; }
+      return "全灭";
+    }
+    function tick() {
+      var pct = 0.03 * st.poison + 0.02 * st.burn + 0.06 * st.leech;
+      var dmg = Math.round(cur(foe).max * pct);
+      if (dmg > 0) cur(foe).hp = Math.max(0, cur(foe).hp - dmg);
+      if (st.burn > 0) st.burn = Math.max(st.burn > 1 ? 1 : 0, Math.floor(st.burn / 2));
+      return dmg;
+    }
+
+    for (var t = 1; t <= turns; t++) {
+      if (over) break;
+      var step = plan[t - 1] || {};
+      function autoCombo(base, trait, ctx) {
+        if (ctx.delta) base = Math.max(1, base + ctx.delta);
+        if (ctx.double) base = Math.max(1, base * 2);
+        if (!trait) return base;
+        if (/无差别过滤/.test(trait)) return 2;
+        var c = base;
+        if (/咔咔冲刺/.test(trait) && ctx.first) c += 1;
+        if (/乘风连击/.test(trait) && ctx.el === "翼") c += 1;
+        if (/侵蚀/.test(trait)) c += ctx.poison;
+        return c;
+      }
+
+      var meCombo = autoCombo(Math.max(1, Number(step.meCombo) || 1), opts.meTrait, { first: opts.first !== "foe", el: opts.meSkillEl, delta: opts.meComboDelta, double: opts.meComboDouble });
+      var foeCombo = autoCombo(Math.max(1, Number(step.foeCombo) || 1), opts.foeTrait, { first: opts.first === "foe", el: opts.foeSkillEl, delta: opts.foeComboDelta });
+      var notes = [];
+      var myAction = step.me || "attack";
+      var foeAction = step.foe || "attack";
+      var mySwitched = false, foeSwitched = false;
+
+      if (myAction === "attack") myAction = "attack:attack";
+      if (foeAction === "attack") foeAction = "attack:attack";
+      var myType = myAction.indexOf("attack:") === 0 ? myAction.split(":")[1] : null;
+      var foeType = foeAction.indexOf("attack:") === 0 ? foeAction.split(":")[1] : null;
+      var myCounter = myAction.indexOf("counter:") === 0 ? myAction.split(":")[1] : null;
+      var foeCounter = foeAction.indexOf("counter:") === 0 ? foeAction.split(":")[1] : null;
+      var myCounterWin = !!myCounter && foeType === myCounter;
+      var foeCounterWin = !!foeCounter && myType === foeCounter;
+
+      if (myAction === "switch") {
+        var mi = nextAlive(me);
+        if (mi >= 0) { me.active = mi; mySwitched = true; notes.push("我方换上 " + (me.slots[mi].name || "替补")); }
+        else notes.push("我方没有可换的精灵");
+      }
+      if (foeAction === "switch") {
+        var fi = nextAlive(foe);
+        if (fi >= 0) { foe.active = fi; foeSwitched = true; notes.push("对手换上 " + (foe.slots[fi].name || "替补")); }
+        else notes.push("对手没有可换的精灵");
+      }
+
+      if (!mySwitched && myType && cur(me).energy < cur(me).cost) {
+        myAction = "charge"; myType = null;
+        notes.push("我方能量不够，改为聚能");
+      }
+      if (!foeSwitched && foeType && cur(foe).energy < cur(foe).cost) {
+        foeAction = "charge"; foeType = null;
+        notes.push("对手能量不够，改为聚能");
+      }
+      var typeName = { attack: "攻击", defense: "防御", status: "状态" };
+      if (myCounterWin) notes.push("我方应对成功（抓到" + (typeName[myCounter] || myCounter) + "）");
+      else if (myCounter && foeType) notes.push("我方应对落空（他出的是" + (typeName[foeType] || foeType) + "）");
+      if (foeCounterWin) notes.push("对手应对成功（抓到" + (typeName[foeCounter] || foeCounter) + "）");
+      else if (foeCounter && myType) notes.push("对手应对落空（你出的是" + (typeName[myType] || myType) + "）");
+
+      var myDmg = 0, foeDmg = 0;
+      function meActs() {
+        if (mySwitched) return;
+        if (myAction === "charge") { cur(me).energy = Math.min(10, cur(me).energy + 5); return; }
+        if (myCounter) { cur(me).energy = Math.max(0, cur(me).energy - cur(me).cost); return; }
+        myDmg = Math.round(cur(me).dmg * meCombo);
+        cur(foe).hp = Math.max(0, cur(foe).hp - myDmg);
+        cur(me).energy = Math.max(0, cur(me).energy - cur(me).cost);
+      }
+      function foeActs() {
+        if (foeSwitched) return;
+        if (foeAction === "charge") { cur(foe).energy = Math.min(10, cur(foe).energy + 5); return; }
+        if (foeCounter) { cur(foe).energy = Math.max(0, cur(foe).energy - cur(foe).cost); return; }
+        var d = Number(step.foeDmg);
+        if (!Number.isFinite(d)) d = cur(foe).dmg;
+        if (myCounterWin && myCounter === "attack") { d = d * 0.3; notes.push("防御类应对减伤 70%"); }
+        foeDmg = Math.round(d * foeCombo);
+        cur(me).hp = Math.max(0, cur(me).hp - foeDmg);
+        cur(foe).energy = Math.max(0, cur(foe).energy - cur(foe).cost);
+      }
+
+      var meFirst;
+      if (myCounterWin !== foeCounterWin) meFirst = myCounterWin;
+      else if (mySwitched !== foeSwitched) meFirst = mySwitched;
+      else meFirst = opts.first !== "foe";
+
+      if (meFirst) { meActs(); if (cur(foe).hp > 0) foeActs(); }
+      else { foeActs(); if (cur(me).hp > 0) meActs(); }
+
+      var foeDown = false;
+      if (cur(foe).hp <= 0) { notes.push("对手倒下：" + ko(foe)); foeDown = true; }
+      if (cur(me).hp <= 0) { notes.push("我方倒下：" + ko(me)); }
+
+      var dot = 0;
+      if (cur(foe).hp > 0) dot = tick();
+      if (cur(foe).hp <= 0 && !foeDown) notes.push("对手倒下：" + ko(foe));
+
+      if (me.mana <= 0) over = "我方魔力归零";
+      if (foe.mana <= 0) over = "对手魔力归零";
+
+      rows.push({
+        turn: t,
+        myHp: cur(me).hp, foeHp: cur(foe).hp,
+        myEnergy: cur(me).energy, foeEnergy: cur(foe).energy,
+        myAct: mySwitched ? "换人" : myCounter ? "应对" : myAction === "charge" ? "聚能" : "攻击",
+        foeAct: foeSwitched ? "换人" : foeCounter ? "应对" : foeAction === "charge" ? "聚能" : "攻击",
+        myDmg: myDmg, foeDmg: foeDmg, dot: dot,
+        poison: st.poison, burn: st.burn, leech: st.leech,
+        myMana: me.mana, foeMana: foe.mana,
+        note: notes.join("；")
+      });
+    }
+    return { rows: rows, over: over };
+  }
+
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = { compute: compute, judge: judge, computeStats: computeStats, natureFactor: natureFactor, simulate: simulate };
+  }
+</script>
+
+<script src="natures-data.js"></script>
+<script src="types-data.js"></script>
+<script src="pets-data.js"></script>
+<script src="speed-data.js"></script>
+<script src="skills-data.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var form = $("form"), err = $("err");
+  var SPEEDS = (window.SPEEDS || []).slice();
+  var speedSel = $("me-preset"), foeSel = $("foe-preset");
+
+  function fillPresets(select) {
+    SPEEDS.forEach(function (sp, i) {
+      var o = document.createElement("option");
+      o.value = String(i);
+      o.textContent = sp.n + " · 速度 " + sp.s;
+      select.appendChild(o);
+    });
+  }
+  fillPresets(speedSel);
+  fillPresets(foeSel);
+
+  function applyPreset(side, index) {
+    if (index === "") return;
+    var sp = SPEEDS[Number(index)];
+    if (!sp) return;
+    $(side + "-speed").value = sp.s;
+    flash($(side + "-speed"));
+    syncDamagePet(side, sp.n);
+  }
+
+  // 主表单选了精灵，伤害试算那边就不用再选一次
+  function syncDamagePet(side, name) {
+    var target = $("dmg-" + side);
+    if (!target) return;
+    var hit = [].slice.call(target.options).filter(function (o) { return o.value === name; })[0];
+    if (hit) target.value = name;
+  }
+  speedSel.addEventListener("change", function () { applyPreset("me", this.value); });
+  foeSel.addEventListener("change", function () { applyPreset("foe", this.value); });
+
+  function read(name) { return $(name).value; }
+
+  function gather() {
+    return {
+      me: { mana: read("me-mana"), hp: read("me-hp"), energy: read("me-energy"), speed: read("me-speed"), priority: read("me-priority"), dmg: read("me-dmg"), role: read("me-role"), action: read("me-action") },
+      foe: { mana: read("foe-mana"), hp: read("foe-hp"), energy: read("foe-energy"), speed: read("foe-speed"), priority: read("foe-priority"), burn: read("foe-burn"), role: read("foe-role"), action: read("foe-action") }
+    };
+  }
+
+  function validate(raw) {
+    var required = ["me-mana", "me-hp", "me-energy", "me-speed", "foe-mana", "foe-hp", "foe-energy", "foe-speed"];
+    for (var i = 0; i < required.length; i++) {
+      if (String($(required[i]).value).trim() === "") return "还有空格没填：" + $(required[i]).closest(".row").querySelector("label").textContent;
+    }
+    if (Number(raw.me.mana) <= 0) return "我方魔力值应大于 0（归零就已经输了）。";
+    if (Number(raw.me.mana) > 4 || Number(raw.foe.mana) > 4) return "魔力值满值只有 4 点，最多填 4。";
+    if (Number(raw.foe.mana) <= 0) return "对手魔力值应大于 0（归零说明这局已经结束）。";
+    return "";
+  }
+
+  var timers = [];
+  function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+
+  function show(node) { node.hidden = false; node.classList.add("reveal"); }
+  function reveal(node, delay) {
+    timers.push(setTimeout(function () { node.classList.add("on"); }, delay));
+  }
+
+  function run() {
+    clearTimers();
+    var raw = gather();
+    var msg = validate(raw);
+    if (msg) {
+      err.textContent = msg;
+      $("stage1").hidden = true;
+      $("stage2").hidden = true;
+      return;
+    }
+    err.textContent = "";
+    saveState();
+
+    var res = compute(raw);
+    var adv = judge(res);
+
+    $("kills-now").textContent = String(res.kills.remaining);
+    $("kills-tag").hidden = !res.kills.canKillNow;
+    $("kills-tag").textContent = res.kills.canKillNow ? "这一击就能打倒场上这只" : "";
+    $("kills-why").textContent = "对手还有 " + res.kills.needed + " 点魔力值，等于还要打倒 " + res.kills.needed + " 只精灵；" +
+      (res.kills.canKillNow ? "这一击已经够了，所以实际还差 " + res.kills.remaining + " 次。" : "这一击打不倒场上这只（可打伤害低于对手血量），所以还是 " + res.kills.needed + " 次。") +
+      (res.actions.me === "switch" ? " 注意：这轮你换人不出招，击杀数按不变算。" : "") +
+      (res.actions.me === "charge" ? " 注意：这轮你聚能不出招，击杀数按不变算。" : "");
+
+    $("sustain").textContent = res.sustain.turns === Infinity ? "很多" : String(res.sustain.turns);
+    $("sustain-why").textContent = res.sustain.turns === Infinity
+      ? "你没填对手每回合耗能，按“不会断能量”处理。"
+      : "对手有 " + res.sustain.energy + " 点星星能量，每回合大约花 " + res.sustain.burn + " 点，" + res.sustain.energy + " ÷ " + res.sustain.burn + " 向下取整＝" + res.sustain.turns + " 轮。之后再出招就得先聚能。";
+
+    var ini = res.initiative;
+    var whoText;
+    if (ini.kind === "counter") whoText = "应对成功，你先手";
+    else if (ini.kind === "switch") whoText = ini.owner === "me" ? "你先换人" : "对手先换人";
+    else whoText = { me: "你先手", foe: "对手先手", tie: "系统随机" }[ini.owner];
+    $("initiative").textContent = whoText;
+    if (ini.kind === "counter") {
+      var picked = res.counter.picked;
+      $("initiative-why").textContent = picked === "counter_guard"
+        ? "防御类应对抓到了他的攻击：这一下减伤 70%，而且应对成功有必定先手权。这类技能通常有一回合冷却，下一轮不能再用。"
+        : picked === "counter_strike"
+          ? "攻击类应对抓到了他的状态技：打断他、还能回能量（部分技能带 2.5 倍应对伤害），并且必定先手。这类没有冷却，有能量就能继续压。"
+          : "状态类应对抓到了他的防御：直接无视他的减伤打出伤害，并且必定先手。专门用来惩罚龟缩防御。";
+    } else if (ini.kind === "switch") {
+      $("initiative-why").textContent = ini.owner === "me"
+        ? "换人排在先手值和速度之前，你先把人换上来；但这轮你不出招，新上场的精灵会吃下他这一下——除非换下时用的技能带“脱离”，能在结算后才离场。"
+        : "对手先把人换上来，然后才轮到你出招；你的攻击会打到他刚换上的那只，而不是换下去的那只。";
+    } else {
+      $("initiative-why").textContent = "先手值 " + ini.myPriority + " 对 " + ini.foePriority +
+        "，速度 " + ini.mySpeed + " 对 " + ini.foeSpeed + "。" +
+        (ini.owner === "me" ? "两项比下来都是你先动。" :
+         ini.owner === "foe" ? "先手值或速度占优的是对手，他先动。" :
+         "先手值和速度都一样，这轮谁先动由系统随机，你要按“可能被抢先”来准备。");
+    }
+
+    $("gametype").textContent = adv.gameType;
+    $("gametype-why").textContent = adv.gameWhy;
+    $("focus").textContent = adv.focus;
+    $("focus-why").textContent = adv.focusWhy;
+    $("tips").innerHTML = "";
+    adv.tips.forEach(function (t) {
+      var li = document.createElement("li");
+      li.textContent = t;
+      $("tips").appendChild(li);
+    });
+
+    var s1 = $("stage1"), s2 = $("stage2");
+    s1.hidden = false; s2.hidden = true;
+    ["c1", "c2", "c3", "c4", "c5", "c6"].forEach(function (id) { $(id).classList.remove("on"); });
+    try {
+      var rect = s1.getBoundingClientRect();
+      if (rect.top > window.innerHeight - 160 || rect.top < 0) {
+        s1.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    } catch (e) {}
+    reveal($("c1"), 60); reveal($("c2"), 760); reveal($("c3"), 1460);
+    timers.push(setTimeout(function () { s2.hidden = false; }, 2100));
+    reveal($("c4"), 2200); reveal($("c5"), 2900); reveal($("c6"), 3600);
+  }
+
+  // ---- 速度榜 ----
+  var SPEED_LIMIT = 40;
+  var speedListEl = $("speedList");
+  if ($("speedTotal")) $("speedTotal").textContent = String(SPEEDS.length);
+
+  function speedRow(sp) {
+    var li = document.createElement("li");
+    li.className = "skillrow";
+
+    var nm = document.createElement("span");
+    nm.className = "nm";
+    nm.textContent = sp.n;
+
+    var tag = document.createElement("span");
+    tag.className = "pill";
+    tag.textContent = "速度 " + sp.s;
+
+    var mine = document.createElement("button");
+    mine.type = "button";
+    mine.className = "ghost";
+    mine.textContent = "填我方";
+    mine.addEventListener("click", function () {
+      $("me-speed").value = sp.s;
+      flash($("me-speed"));
+    });
+
+    var theirs = document.createElement("button");
+    theirs.type = "button";
+    theirs.className = "ghost";
+    theirs.textContent = "填对手";
+    theirs.addEventListener("click", function () {
+      $("foe-speed").value = sp.s;
+      flash($("foe-speed"));
+    });
+
+    li.appendChild(nm);
+    li.appendChild(tag);
+    li.appendChild(mine);
+    li.appendChild(theirs);
+    return li;
+  }
+
+  function renderSpeeds() {
+    if (!speedListEl) return;
+    var q = $("speedSearch").value.trim().toLowerCase();
+    var hits = SPEEDS.filter(function (sp) { return !q || sp.n.toLowerCase().indexOf(q) >= 0; });
+    speedListEl.innerHTML = "";
+    hits.slice(0, SPEED_LIMIT).forEach(function (sp) { speedListEl.appendChild(speedRow(sp)); });
+    if (!hits.length) {
+      var empty = document.createElement("li");
+      empty.className = "skillrow";
+      empty.textContent = "没找到这只，手册里没有就自己填速度。";
+      speedListEl.appendChild(empty);
+    }
+    $("speedCount").textContent = hits.length + " 个结果";
+    $("speedMore").hidden = hits.length <= SPEED_LIMIT;
+    $("speedMore").textContent = hits.length > SPEED_LIMIT ? "还有 " + (hits.length - SPEED_LIMIT) + " 只没显示，输入名字缩小范围。" : "";
+  }
+
+  if ($("speedSearch")) {
+    $("speedSearch").addEventListener("input", renderSpeeds);
+    renderSpeeds();
+  }
+
+  // ---- 技能速查 ----
+  var SKILLS = (window.SKILLS || []).slice();
+  var SKILL_LIMIT = 30;
+  var listEl = $("skillList"), moreEl = $("skillMore"), countEl = $("skillCount");
+
+  if ($("skillTotal")) $("skillTotal").textContent = String(SKILLS.length);
+
+  function skillMatches(sk, q, type) {
+    if (type && sk.t !== type) return false;
+    if (!q) return true;
+    return (sk.n + " " + sk.e + " " + sk.t + " " + sk.d).toLowerCase().indexOf(q) >= 0;
+  }
+
+  function flash(input) {
+    input.style.outline = "2px solid var(--accent)";
+    setTimeout(function () { input.style.outline = ""; }, 1200);
+  }
+
+  function skillRow(sk) {
+    var li = document.createElement("li");
+    li.className = "skillrow";
+    li.title = sk.d || "";
+
+    var nm = document.createElement("span");
+    nm.className = "nm";
+    nm.textContent = sk.n;
+
+    var tag = document.createElement("span");
+    tag.className = "pill";
+    tag.textContent = (sk.e || "?") + " · " + (sk.t || "?");
+
+    var meta = document.createElement("span");
+    meta.className = "pill";
+    meta.textContent = (sk.p === null ? "无威力" : "威力 " + sk.p) + " · 耗能 " + sk.c + (sk.r ? " · 先手 " + sk.r : "");
+
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "ghost";
+    btn.textContent = "当作对手这轮技能";
+    btn.addEventListener("click", function () {
+      $("foe-burn").value = sk.c;
+      if (sk.r > 0) $("foe-priority").value = sk.r;
+      flash($("foe-burn"));
+      $("foe-burn").scrollIntoView({ block: "center", behavior: "smooth" });
+      var raw = gather();
+      if (!validate(raw)) run();
+    });
+
+    li.appendChild(nm);
+    li.appendChild(tag);
+    li.appendChild(meta);
+    li.appendChild(btn);
+    return li;
+  }
+
+  function renderSkills() {
+    if (!listEl) return;
+    var q = $("skillSearch").value.trim().toLowerCase();
+    var type = $("skillType").value;
+    var hits = SKILLS.filter(function (sk) { return skillMatches(sk, q, type); });
+    listEl.innerHTML = "";
+    hits.slice(0, SKILL_LIMIT).forEach(function (sk) { listEl.appendChild(skillRow(sk)); });
+    if (!hits.length) {
+      var empty = document.createElement("li");
+      empty.className = "skillrow";
+      empty.textContent = "没找到，换个说法试试（技能名、属性、效果里的词都行）。";
+      listEl.appendChild(empty);
+    }
+    countEl.textContent = hits.length + " 个结果";
+    moreEl.hidden = hits.length <= SKILL_LIMIT;
+    moreEl.textContent = hits.length > SKILL_LIMIT ? "还有 " + (hits.length - SKILL_LIMIT) + " 个没显示，再输入几个字缩小范围。" : "";
+  }
+
+  // 网址带 ?q=关键词 时预置搜索，便于截图与分享
+  var seed = /[?&]q=([^&]+)/.exec(location.search);
+  if (seed && $("skillSearch")) $("skillSearch").value = decodeURIComponent(seed[1]);
+
+  if ($("skillSearch")) {
+    $("skillSearch").addEventListener("input", renderSkills);
+    $("skillType").addEventListener("change", renderSkills);
+    renderSkills();
+  }
+
+  // ---- 局面保存：换页、刷新都不丢 ----
+  var STATE_KEY = "luoke.state";
+
+  function saveState() {
+    try {
+      var out = {};
+      form.querySelectorAll("input, select").forEach(function (el) {
+        if (el.id) out[el.id] = el.value;
+      });
+      localStorage.setItem(STATE_KEY, JSON.stringify(out));
+    } catch (e) {}
+  }
+
+  function restoreState() {
+    try {
+      var saved = JSON.parse(localStorage.getItem(STATE_KEY) || "{}");
+      Object.keys(saved).forEach(function (id) {
+        var el = $(id);
+        if (el && el.tagName !== "BUTTON") el.value = saved[id];
+      });
+    } catch (e) {}
+  }
+
+  // ---- 伤害试算 ----
+  var PETS = (window.PETS || []).slice();
+  // 防御技能的减伤直接从技能描述里读：“✦减伤80%，应对攻击：…”
+  var DEF_SKILLS = (window.SKILLS || []).map(function (sk) {
+    var m = /减伤(\d+)%/.exec(sk.d || "");
+    return m ? { id: sk.id, n: sk.n, cut: Number(m[1]) } : null;
+  }).filter(Boolean);
+  var K_KEY = "luoke.damage.k";
+
+  function option(select, value, label) {
+    var o = document.createElement("option");
+    o.value = value;
+    o.textContent = label;
+    select.appendChild(o);
+  }
+
+  if (PETS.length && $("dmg-me")) {
+    PETS.forEach(function (pet) {
+      option($("dmg-me"), pet.n, pet.n + "（物攻 " + pet.atk + " / 魔攻 " + pet.ma + " / 物防 " + pet.def + " / 魔防 " + pet.md + "）");
+      option($("dmg-foe"), pet.n, pet.n + "（物防 " + pet.def + " / 魔防 " + pet.md + "）");
+    });
+    ["dmg-me-nature", "dmg-foe-nature"].forEach(function (id) {
+      option($(id), "", "性格：未选（不加不减）");
+      (window.NATURES || []).forEach(function (na) {
+        option($(id), na.n, na.n + "（" + na.up + "▲ / " + na.down + "▼）");
+      });
+    });
+    option($("dmg-def"), "", "不用防御技能（减伤 0）");
+    DEF_SKILLS.forEach(function (d) {
+      option($("dmg-def"), String(d.id), d.n + "（减伤 " + d.cut + "%）");
+    });
+    SKILLS.forEach(function (sk) {
+      if (sk.p === null) return;
+      option($("dmg-skill"), String(sk.id), sk.n + "（威力 " + sk.p + " · 耗能 " + sk.c + "）");
+    });
+  }
+
+  function petByName(name) { return PETS.filter(function (x) { return x.n === name; })[0]; }
+  function skillById(id) { return SKILLS.filter(function (x) { return String(x.id) === String(id); })[0]; }
+  function readK() { var v = Number(localStorage.getItem(K_KEY)); return Number.isFinite(v) && v > 0 ? v : null; }
+
+  // 克制：对每个防守属性，命中 strong 就 +1 倍（所以双克是 3 倍），命中 resist 就 ×0.5
+  function typeMultiplier(attackType, foe) {
+    var chart = (window.TYPES || {})[attackType];
+    if (!chart) return { value: 1, label: "无属性资料" };
+    var add = 0;
+    var half = 0;
+    var notes = [];
+    [foe.el, foe.el2].filter(Boolean).forEach(function (t) {
+      if ((chart.strong || []).indexOf(t) >= 0) { add += 1; notes.push(t + "系克制"); }
+      if ((chart.resist || []).indexOf(t) >= 0) { half += 1; notes.push(t + "系抵抗"); }
+    });
+    var value = Math.round((1 + add) * Math.pow(0.5, half) * 100) / 100;
+    return { value: value, label: notes.length ? notes.join("、") : "不克不抗" };
+  }
+
+  // 特性：按文字里能确定的条件生效；条件不满足就明说，不硬算
+  var TRAIT_RULES = [
+    // 按层数加成的特性（层数来自「场上层数」那三个输入）
+    { re: /敌方每有1层星陨印记，自己的?地系技能威力\+(\d+)%/, apply: function (m, ctx, out) {
+        var n = (ctx.stacks && ctx.stacks.star) || 0;
+        if (!n) return "场上没有星陨印记，不触发";
+        if (ctx.skill.e !== "地") return "只对地系技能生效";
+        out.powerPct += Number(m[1]) * n;
+        return "星陨 " + n + " 层 → 威力+" + (Number(m[1]) * n) + "%";
+      } },
+    { re: /敌方每有1层星陨印记，自己的?技能威力\+(\d+)%/, apply: function (m, ctx, out) {
+        var n = (ctx.stacks && ctx.stacks.star) || 0;
+        if (!n) return "场上没有星陨印记，不触发";
+        out.powerPct += Number(m[1]) * n;
+        return "星陨 " + n + " 层 → 威力+" + (Number(m[1]) * n) + "%";
+      } },
+    { re: /敌方每有1层增益，本次技能威力\+(\d+)%/, apply: function (m, ctx, out) {
+        var n = (ctx.stacks && ctx.stacks.buff) || 0;
+        if (!n) return "对方身上没有增益，不触发";
+        out.powerPct += Number(m[1]) * n;
+        return "敌方 " + n + " 层增益 → 威力+" + (Number(m[1]) * n) + "%";
+      } },
+    { re: /敌方每有1层中毒效果，自己获得连击数\+(\d+)/, apply: function (m, ctx, out) {
+        var n = (ctx.stacks && ctx.stacks.poison) || 0;
+        if (!n) return "对方没有中毒层数，不触发";
+        out.extraHits += Number(m[1]) * n;
+        return "中毒 " + n + " 层 → 连击+" + (Number(m[1]) * n);
+      } },
+    // 使用X系技能后，双攻+N%
+    { re: /使用([\u4e00-\u9fa5])系技能后[^。]{0,24}?双攻\+(\d+)%/, apply: function (m, ctx, out) {
+        if (ctx.skill.e !== m[1]) return "只在使用" + m[1] + "系技能时生效";
+        out.atkPct += Number(m[2]);
+        return "使用" + m[1] + "系技能后双攻+" + m[2] + "%";
+      } },
+    // 攻击技能获得迸发：威力+N
+    { re: /攻击技能获得迸发：威力\+(\d+)/, apply: function (m, ctx, out) {
+        if (ctx.skill.t !== "物攻" && ctx.skill.t !== "魔攻") return "只对攻击技能生效";
+        out.powerFlat += Number(m[1]);
+        return "攻击技能威力+" + m[1];
+      } },
+    // 携带的【技能名】威力+N
+    { re: /【([^】]+)】技能威力\+(\d+)/, apply: function (m, ctx, out) {
+        if (ctx.skill.n !== m[1]) return "只在用【" + m[1] + "】时生效";
+        out.powerFlat += Number(m[2]);
+        return "【" + m[1] + "】威力+" + m[2];
+      } },
+    // 能耗为N的技能，威力+N%
+    { re: /能耗为(\d+)的技能，威力\+(\d+)%/, apply: function (m, ctx, out) {
+        if (ctx.skill.c !== Number(m[1])) return "只对能耗 " + m[1] + " 的技能生效";
+        out.powerPct += Number(m[2]);
+        return "能耗" + m[1] + "的技能威力+" + m[2] + "%";
+      } },
+    // 能耗大于N的技能，威力+N%
+    { re: /能耗大于(\d+)的技能，威力\+(\d+)%/, apply: function (m, ctx, out) {
+        if (ctx.skill.c <= Number(m[1])) return "只对能耗大于 " + m[1] + " 的技能生效";
+        out.powerPct += Number(m[2]);
+        return "高耗能技能威力+" + m[2] + "%";
+      } },
+    // 携带的非X系技能威力+N%
+    { re: /携带的非([\u4e00-\u9fa5])系技能，威力\+(\d+)%/, apply: function (m, ctx, out) {
+        if (ctx.skill.e === m[1]) return "只对非" + m[1] + "系技能生效";
+        out.powerPct += Number(m[2]);
+        return "非" + m[1] + "系技能威力+" + m[2] + "%";
+      } },
+    // 使用非本系技能时威力+N%
+    { re: /使用非本系技能时威力\+(\d+)%/, apply: function (m, ctx, out) {
+        if (!ctx.pet.el || ctx.skill.e === ctx.pet.el || ctx.skill.e === ctx.pet.el2) return "只在使用非本系技能时生效";
+        out.powerPct += Number(m[1]);
+        return "非本系技能威力+" + m[1] + "%";
+      } },
+    // 若先于敌方攻击，本次技能威力+N%
+    { re: /若先于敌方攻击，本次技能威力\+(\d+)%/, apply: function (m, ctx, out) {
+        if (!ctx.first) return "这轮你不是先手，不触发";
+        out.powerPct += Number(m[1]);
+        return "先手时威力+" + m[1] + "%";
+      } },
+    // 通用：双攻+N%
+    { re: /双攻\+(\d+)%/, apply: function (m, ctx, out) {
+        out.atkPct += Number(m[1]);
+        return "双攻+" + m[1] + "%";
+      } },
+    // 通用：物攻+N% / 魔攻+N%
+    { re: /物攻\+(\d+)%/, apply: function (m, ctx, out) {
+        if (ctx.skill.t !== "物攻") return "只对物攻技能生效";
+        out.atkPct += Number(m[1]);
+        return "物攻+" + m[1] + "%";
+      } },
+    { re: /魔攻\+(\d+)%/, apply: function (m, ctx, out) {
+        if (ctx.skill.t !== "魔攻") return "只对魔攻技能生效";
+        out.atkPct += Number(m[1]);
+        return "魔攻+" + m[1] + "%";
+      } }
+  ];
+
+  function traitEffects(pet, ctx) {
+    var out = { powerPct: 0, powerFlat: 0, atkPct: 0, extraHits: 0, notes: [], skipped: [] };
+    var text = pet.td || "";
+    for (var i = 0; i < TRAIT_RULES.length; i++) {
+      var rule = TRAIT_RULES[i];
+      var m = rule.re.exec(text);
+      if (!m) continue;
+      text = text.replace(m[0], "");
+      var note = rule.apply(m, ctx, out);
+      if (note.indexOf("只") === 0 || note.indexOf("这轮") === 0) out.skipped.push(pet.t + "：" + note);
+      else out.notes.push(pet.t + "：" + note);
+    }
+    return out;
+  }
+
+  function sideStats(side) {
+    var pet = petByName($("dmg-" + side).value);
+    if (!pet) return null;
+    var natureName = $("dmg-" + side + "-nature").value;
+    var nature = (window.NATURES || []).filter(function (n) { return n.n === natureName; })[0] || null;
+    var stars = Number($("dmg-" + side + "-star").value);
+    if (!Number.isFinite(stars)) stars = 5;
+    return { pet: pet, nature: nature, stats: computeStats(pet, {
+      level: $("dmg-" + side + "-level").value,
+      stars: stars,
+      iv: $("dmg-" + side + "-iv").value,
+      nature: nature
+    }) };
+  }
+
+  function damageParts() {
+    var me = petByName($("dmg-me").value);
+    var foe = petByName($("dmg-foe").value);
+    var sk = skillById($("dmg-skill").value);
+    if (!me || !foe || !sk || sk.p === null) return null;
+    var magic = sk.t === "魔攻";
+    var meSide = sideStats("me");
+    var foeSide = sideStats("foe");
+    if (!meSide || !foeSide) return null;
+    var atk = magic ? meSide.stats.ma : meSide.stats.atk;
+    var def = magic ? foeSide.stats.md : foeSide.stats.def;
+    if (!atk || !def) return null;
+    var first = false;
+    try { first = compute(gather()).initiative.owner === "me"; } catch (e) {}
+    var stacks = {
+      star: Math.max(0, Number($("stack-star").value) || 0),
+      poison: Math.max(0, Number($("stack-poison").value) || 0),
+      buff: Math.max(0, Number($("stack-buff").value) || 0)
+    };
+    var trait = traitEffects(me, { pet: me, skill: sk, first: first, stacks: stacks });
+    var power = Math.round((sk.p * (1 + trait.powerPct / 100) + trait.powerFlat) * 100) / 100;
+    var meNature = meSide.nature;
+    var foeNature = foeSide.nature;
+    var atkFactor = 1 + trait.atkPct / 100;
+    var defSkill = DEF_SKILLS.filter(function (d) { return String(d.id) === $("dmg-def").value; })[0] || null;
+    var cut = defSkill ? defSkill.cut : 0;
+    var hits = Math.max(1, Number($("dmg-hits").value) || 1) + (trait.extraHits || 0);
+    var marks = Math.max(0, Number($("st-atkmarks").value) || 0);
+    var wind = Math.max(0, Number($("st-wind").value) || 0);
+    var charged = $("st-charge").value === "1";
+    var weather = $("st-weather").value;
+    var markMult = 1 + 0.1 * marks;
+    var windMult = (first && wind) ? 1 + 0.2 * wind : 1;
+    var chargeMult = charged ? 1.3 : 1;
+    var weatherMult = (weather === "rain" && sk.e === "水") ? 1.75 : 1;
+    return { me: me, foe: foe, sk: sk, atk: atk, def: def, ratio: atk / def, magic: magic,
+             meStats: meSide.stats, foeStats: foeSide.stats, meNature: meNature, foeNature: foeNature,
+             mult: typeMultiplier(sk.e, foe), trait: trait, power: power, atkFactor: atkFactor, first: first,
+             cut: cut, defSkill: defSkill, hits: hits,
+             markMult: markMult, windMult: windMult, chargeMult: chargeMult, weatherMult: weatherMult,
+             marks: marks, wind: wind, charged: charged, weather: weather,
+             stateMult: markMult * windMult * chargeMult * weatherMult };
+  }
+
+  function renderStats() {
+    function block(side) {
+      var info = sideStats(side);
+      if (!info) return "";
+      var pet = info.pet, st = info.stats;
+      var rows = [
+        ["属性", pet.el + (pet.el2 ? " / " + pet.el2 : ""), ""],
+        ["生命", pet.hp, st.hp],
+        ["物攻", pet.atk, st.atk],
+        ["物防", pet.def, st.def],
+        ["魔攻", pet.ma, st.ma],
+        ["魔防", pet.md, st.md],
+        ["速度", pet.spe, st.spe]
+      ];
+      var html = rows.map(function (r) {
+        return "<div class='statrow'><span>" + r[0] + "</span><b>" +
+          (r[2] === "" ? r[1] : r[1] + " → " + r[2]) + "</b></div>";
+      }).join("");
+      html += "<div class='statrow'><span>特性</span><b>" + (pet.t || "—") + "</b></div>";
+      var cur = Number($(side === "me" ? "me-hp" : "foe-hp").value) || st.hp;
+      var bar = $(side === "me" ? "dmg-me-bar" : "dmg-foe-bar");
+      if (bar) bar.style.width = Math.max(0, Math.min(100, cur / st.hp * 100)) + "%";
+      return html;
+    }
+    $("dmg-me-stats").innerHTML = block("me");
+    $("dmg-foe-stats").innerHTML = block("foe");
+  }
+
+  function updateResult() {
+    var parts = damageParts();
+    var k = Number($("dmg-k").value);
+    if (!parts || !(k > 0)) {
+      $("dmg-value").textContent = "–";
+      $("dmg-bar").style.width = "0";
+      $("dmg-ko").textContent = "还没有可用的系数：先填一次实测伤害按“校准”，或者手动填系数。";
+      return;
+    }
+    var dmg = Math.round(parts.power * parts.ratio * parts.mult.value * parts.atkFactor * (1 - parts.cut / 100) * parts.hits * parts.stateMult * k);
+    var foeHp = Math.max(1, Number($("foe-hp").value) || 1);
+    var pct = dmg / foeHp * 100;
+    var hits = Math.max(1, Math.ceil(foeHp / Math.max(1, dmg)));
+    $("dmg-value").textContent = String(dmg);
+    $("dmg-bar").style.width = Math.min(100, pct) + "%";
+    var maxHp = parts.foeStats ? parts.foeStats.hp : foeHp;
+    var poison = Math.max(0, Number($("stack-poison").value) || 0);
+    var burn = Math.max(0, Number($("st-burn").value) || 0);
+    var leech = Math.max(0, Number($("st-leech").value) || 0);
+    var tick = Math.round(maxHp * (0.03 * poison + 0.02 * burn + 0.06 * leech));
+    var tickText = tick > 0 ? " 回合结束时他还会掉 <b>" + tick + "</b>（中毒 " + poison + " 层 / 灼烧 " + burn + " 层 / 寄生 " + leech + " 层）。" : "";
+    $("dmg-ko").innerHTML = "占对手剩余血量 <b>" + Math.round(pct) + "%</b>，" +
+      (pct >= 100 ? "<b>这一下就能打倒</b>" : "<b>" + hits + " 发</b>打倒") + "。" + tickText;
+  }
+
+  function dmgHint(text) { if ($("dmg-out")) $("dmg-out").textContent = text; }
+
+  function renderTraitLine() {
+    var el = $("trait-line");
+    if (!el) return;
+    var me = petByName($("dmg-me").value);
+    var foe = petByName($("dmg-foe").value);
+    var parts = [];
+    if (me && me.t) parts.push("我方 " + me.n + "【" + me.t + "】" + (me.td || ""));
+    if (foe && foe.t) parts.push("对手 " + foe.n + "【" + foe.t + "】" + (foe.td || ""));
+    el.textContent = parts.length ? parts.join(" ｜ ") : "选好精灵后这里会显示双方特性原文。";
+  }
+
+  var storedK = readK();
+  if (storedK && $("dmg-k")) $("dmg-k").value = String(Math.round(storedK * 1000) / 1000);
+
+  if ($("dmg-calibrate")) {
+    function renderSkillBadges() {
+      var sk = skillById($("dmg-skill").value);
+      var box = $("dmg-skill-badges");
+      if (!box) return;
+      if (!sk) { box.innerHTML = ""; return; }
+      box.innerHTML = [
+        '<span class="badge">' + sk.e + "系</span>",
+        '<span class="badge">' + sk.t + "</span>",
+        sk.p === null ? "" : '<span class="badge power">威力 ' + sk.p + "</span>",
+        '<span class="badge">耗能 ' + sk.c + "</span>",
+        sk.r ? '<span class="badge type">先手 +' + sk.r + "</span>" : ""
+      ].join("");
+    }
+    $("dmgWrap").addEventListener("change", function () { renderTraitLine(); renderStats(); renderSkillBadges(); updateResult(); });
+    $("dmg-skill").addEventListener("change", renderSkillBadges);
+    renderSkillBadges();
+    renderStats();
+    renderTraitLine();
+
+    $("dmg-calibrate").addEventListener("click", function () {
+      renderTraitLine();
+      renderStats();
+      renderSkillBadges();
+      var parts = damageParts();
+      var real = Number($("dmg-real").value);
+      if (!parts) return dmgHint("先选好双方精灵和技能。");
+      if (!(real > 0)) return dmgHint("填一次你实际打出来的伤害，比如 200。");
+      var k = real / (parts.power * parts.ratio * parts.mult.value * parts.atkFactor * (1 - parts.cut / 100) * parts.hits * parts.stateMult);
+      localStorage.setItem(K_KEY, String(k));
+      $("dmg-k").value = String(Math.round(k * 1000) / 1000);
+      updateResult();
+      dmgHint("校准好了：系数 " + (Math.round(k * 1000) / 1000) + "。公式是 威力 " + parts.sk.p + " × (攻 " + parts.atk + " ÷ 防 " + parts.def + ") × 克制倍率 " + parts.mult.value + " × 特性 " + parts.trait.mult + " × 系数（系数按“不克不抗、无特性加成”记）。");
+    });
+
+    $("dmg-apply").addEventListener("click", function () {
+      renderTraitLine();
+      renderStats();
+      var parts = damageParts();
+      var k = Number($("dmg-k").value);
+      if (!parts) return dmgHint("先选好双方精灵和技能。");
+      if (!(k > 0)) return dmgHint("还没有系数：先填一次实测伤害按“校准”，或者手动填系数。");
+      var dmg = Math.round(parts.power * parts.ratio * parts.mult.value * parts.atkFactor * (1 - parts.cut / 100) * parts.hits * parts.stateMult * k);
+      $("me-dmg").value = String(dmg);
+      flash($("me-dmg"));
+      updateResult();
+      dmgHint("按 威力 " + parts.power + " × (" + (parts.magic ? "魔攻 " : "物攻 ") + parts.atk + " ÷ " + (parts.magic ? "魔防 " : "物防 ") + parts.def + ") × 克制倍率 " + parts.mult.value + "（" + parts.mult.label + "）× 攻击加成 " + (Math.round(parts.atkFactor * 100) / 100) + (parts.trait.notes.length ? "（" + parts.trait.notes.join("、") + "）" : "") + (parts.meNature ? "（性格 " + parts.meNature.n + " " + parts.meNature.up + "▲）" : "") + (parts.foeNature ? "（对手性格 " + parts.foeNature.n + " " + parts.foeNature.down + "▼）" : "") + " × 减伤后 " + (Math.round((1 - parts.cut / 100) * 100) / 100) + (parts.stateMult !== 1 ? " × 战场状态 " + (Math.round(parts.stateMult * 100) / 100) + "（" + [parts.marks ? "攻击印记 " + parts.marks + " 层" : "", parts.wind ? "风起 " + parts.wind + " 层" : "", parts.charged ? "蓄势" : "", parts.weather === "rain" ? "下雨" : ""].filter(Boolean).join("、") + "）" : "") + (parts.defSkill ? "（" + parts.defSkill.n + " 减伤 " + parts.cut + "%）" : "") + " × 连击 " + parts.hits + " × 系数 " + k + " 算得 " + dmg + "，已填进「本回合可打伤害」。" + (parts.trait.skipped.length ? " 没触发的特性：" + parts.trait.skipped.join("；") + "。" : ""));
+    });
+  }
+
+  var submitBtn = form.querySelector('button[type="submit"]');
+  // ---- 回合推演 ----
+  function benchSlot(side, name, baseStats, baseDmg, magic, cost) {
+    if (!name) return null;
+    var pet = petByName(name);
+    if (!pet) return null;
+    var natureName = $("dmg-" + side + "-nature").value;
+    var nature = (window.NATURES || []).filter(function (n) { return n.n === natureName; })[0] || null;
+    var stats = computeStats(pet, {
+      level: $("dmg-" + side + "-level").value,
+      stars: Number($("dmg-" + side + "-star").value),
+      iv: Number($("dmg-" + side + "-iv").value),
+      nature: nature
+    });
+    var base = magic ? baseStats.ma : baseStats.atk;
+    var mine = magic ? stats.ma : stats.atk;
+    var scaled = base > 0 ? Math.round(baseDmg * (mine / base)) : baseDmg;
+    return { name: pet.n, hp: stats.hp, max: stats.hp, energy: 10, cost: cost, dmg: scaled };
+  }
+
+  function runSim() {
+    var parts = damageParts();
+    var k = Number($("dmg-k").value);
+    if (!parts || !(k > 0)) {
+      $("sim-note").textContent = "先把上面的伤害校准好（有系数）再来推演。";
+      $("sim-table").innerHTML = "";
+      return;
+    }
+    var meDmg = Math.round(parts.power * parts.ratio * parts.mult.value * parts.atkFactor * (1 - parts.cut / 100) * parts.hits * parts.stateMult * k);
+    var foeDmgPerTurn = Math.max(0, Number($("sim-foe-dmg").value) || 0);
+
+    var baseDmg = Math.round(meDmg / Math.max(1, parts.hits));
+    var meSlot = { name: parts.me.n, hp: Number($("me-hp").value) || parts.meStats.hp, max: parts.meStats.hp, energy: Number($("me-energy").value) || 0, cost: parts.sk.c, dmg: baseDmg };
+    var foeSlot = { name: parts.foe.n, hp: Number($("foe-hp").value) || parts.foeStats.hp, max: parts.foeStats.hp, energy: Number($("foe-energy").value) || 0, cost: Math.max(1, Number($("foe-burn").value) || 2), dmg: foeDmgPerTurn };
+
+    var meBench = benchSlot("me", $("sim-me-bench").value, parts.meStats, baseDmg, parts.magic, parts.sk.c);
+    var foeBench = benchSlot("foe", $("sim-foe-bench").value, parts.foeStats, foeDmgPerTurn, false, Math.max(1, Number($("foe-burn").value) || 2));
+
+    var meSlots = [meSlot]; if (meBench) meSlots.push(meBench);
+    var foeSlots = [foeSlot]; if (foeBench) foeSlots.push(foeBench);
+
+    var res = simulate({
+      meSlots: meSlots, foeSlots: foeSlots,
+      meTrait: parts.me.t, foeTrait: parts.foe.t,
+      meSkillEl: parts.sk.e, foeSkillEl: "",
+      meComboDelta: (function (d) { var m = /获得连击数\+(\d+)(?!%)/.exec(d || ""); return m ? Number(m[1]) : 0; })(parts.sk.d),
+      meComboDouble: /连击数\+100%/.test(parts.sk.d || ""),
+      foeComboDelta: (function (d) { var m = /敌方获得连击数-(\d+)/.exec(d || ""); return m ? -Number(m[1]) : 0; })(parts.sk.d),
+      meMana: Number($("me-mana").value) || 0, foeMana: Number($("foe-mana").value) || 0,
+      poison: Number($("stack-poison").value) || 0,
+      burn: Number($("st-burn").value) || 0,
+      leech: Number($("st-leech").value) || 0,
+      plan: readPlan(),
+      turns: Number($("sim-turns").value) || 3,
+      first: parts.first ? "me" : "foe"
+    });
+
+    var html = "<tr><th>回合</th><th>我方 HP</th><th>对手 HP</th><th>魔力 我/敌</th><th>能量 我/敌</th><th>行动</th><th>回合结束</th></tr>";
+    res.rows.forEach(function (r) {
+      var dead = r.myHp <= 0 || r.foeHp <= 0;
+      html += "<tr" + (dead ? ' class="ko"' : "") + "><td>T" + r.turn + "</td><td>" + r.myHp + "</td><td>" + r.foeHp + "</td><td>" + r.myMana + " / " + r.foeMana + "</td><td>" + r.myEnergy + " / " + r.foeEnergy + "</td><td style='text-align:left'>我 " + r.myAct + " / 敌 " + r.foeAct + (r.note ? "<br><span style='color:#a2541a;font-size:12px'>" + r.note + "</span>" : "") + "</td><td>" + (r.dot ? "掉 " + r.dot : "—") + "</td></tr>";
+    });
+    $("sim-table").innerHTML = html;
+    var last = res.rows[res.rows.length - 1];
+    $("sim-note").textContent = "按策略推演到 T" + last.turn + "：我方 " + last.myHp + " 血 / 对手 " + last.foeHp + " 血" +
+      (res.over ? "，" + res.over + "。" : "，双方都还站着。");
+  }
+
+  function fillBench() {
+    ["sim-me-bench", "sim-foe-bench"].forEach(function (id) {
+      var sel = $(id);
+      if (!sel || sel.options.length > 1) return;
+      (window.PETS || []).forEach(function (pet) { option(sel, pet.n, pet.n); });
+    });
+  }
+
+  function renderPlan() {
+    var n = Number($("sim-turns").value) || 3;
+    var html = "<tr><th>回合</th><th>我方动作</th><th>对手动作</th><th>对手这回合伤害</th><th>我方连击</th><th>对手连击</th></tr>";
+    for (var t = 1; t <= n; t++) {
+      html += "<tr><td>T" + t + "</td>" +
+        "<td><select data-turn='" + t + "' data-side='me' style='width:100%'><option value='attack:attack'>出招·攻击</option><option value='attack:defense'>出招·防御</option><option value='attack:status'>出招·状态</option><option value='charge'>聚能</option><option value='switch'>换人</option><option value='counter:attack'>应对攻击</option><option value='counter:status'>应对状态</option><option value='counter:defense'>应对防御</option></select></td>" +
+        "<td><select data-turn='" + t + "' data-side='foe' style='width:100%'><option value='attack:attack'>出招·攻击</option><option value='attack:defense'>出招·防御</option><option value='attack:status'>出招·状态</option><option value='charge'>聚能</option><option value='switch'>换人</option><option value='counter:attack'>应对攻击</option><option value='counter:status'>应对状态</option><option value='counter:defense'>应对防御</option></select></td>" +
+        "<td><input data-turn='" + t + "' data-side='foeDmg' type='number' min='0' step='1' value='" + (Number($("sim-foe-dmg").value) || 0) + "' style='width:90px'></td>" +
+        "<td><input data-turn='" + t + "' data-side='meCombo' type='number' min='1' step='1' value='1' style='width:64px'></td>" +
+        "<td><input data-turn='" + t + "' data-side='foeCombo' type='number' min='1' step='1' value='1' style='width:64px'></td></tr>";
+    }
+    $("sim-plan").innerHTML = html;
+  }
+
+  function readPlan() {
+    var n = Number($("sim-turns").value) || 3;
+    var plan = [];
+    for (var t = 1; t <= n; t++) {
+      var meSel = document.querySelector("[data-turn='" + t + "'][data-side='me']");
+      var foeSel = document.querySelector("[data-turn='" + t + "'][data-side='foe']");
+      var dmgIn = document.querySelector("[data-turn='" + t + "'][data-side='foeDmg']");
+      var meCombo = document.querySelector("[data-turn='" + t + "'][data-side='meCombo']");
+      var foeCombo = document.querySelector("[data-turn='" + t + "'][data-side='foeCombo']");
+      plan.push({
+        me: meSel ? meSel.value : "attack:attack",
+        foe: foeSel ? foeSel.value : "attack:attack",
+        foeDmg: dmgIn ? Number(dmgIn.value) : 0,
+        meCombo: meCombo ? Math.max(1, Number(meCombo.value) || 1) : 1,
+        foeCombo: foeCombo ? Math.max(1, Number(foeCombo.value) || 1) : 1
+      });
+    }
+    return plan;
+  }
+
+  fillBench();
+  if ($("sim-turns")) {
+    $("sim-turns").addEventListener("change", renderPlan);
+    renderPlan();
+  }
+
+  if ($("sim-run")) $("sim-run").addEventListener("click", runSim);
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    run();
+
+    if (submitBtn) {
+      var old = submitBtn.textContent;
+      submitBtn.textContent = "算好了，往下看 ↓";
+      setTimeout(function () { submitBtn.textContent = old; }, 1800);
+    }
+  });
+  // 便于截图/演示：网址带 ?auto=1 时自动填好并跑一次
+  var jumpButtons = document.querySelectorAll("[data-jump]");
+  Array.prototype.forEach.call(jumpButtons, function (btn) {
+    btn.addEventListener("click", function () {
+      Array.prototype.forEach.call(jumpButtons, function (b) { b.classList.remove("on"); });
+      btn.classList.add("on");
+      var target = document.getElementById(btn.getAttribute("data-jump"));
+      if (!target) return;
+      if (target.tagName === "DETAILS") target.open = true;
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
+
+  restoreState();
+  if (/[?&]auto=1\b/.test(location.search)) { setTimeout(run, 300); }
+  $("reset").addEventListener("click", function () {
+    clearTimers();
+    form.reset();
+    try { localStorage.removeItem(STATE_KEY); } catch (e) {}
+    $("stage1").hidden = true; $("stage2").hidden = true;
+    err.textContent = "";
+    ["c1", "c2", "c3", "c4", "c5", "c6"].forEach(function (id) { $(id).classList.remove("on"); });
+  });
+})();
+</script>
+</body>
+</html>
